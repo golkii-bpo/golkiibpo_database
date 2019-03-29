@@ -80,11 +80,10 @@ AS
         Persona A
     WHERE
         A.IsWorking = 1
-		AND A.StatusCredex IN ('Aprobado Credex','Linea Autorizada','Linea Autorizada','Linea Autorizada')
-        AND (A.Salario > 16000 OR A.SalarioInss > 16000)
+        AND (A.Salario > 18000 OR A.SalarioInss > 18000)
         AND A.Estado = 1
+        AND A.Departamento = 'MANAGUA'
 )
-
 SELECT TOP 2000
 	A.Nombre,
 	A.Cedula,
@@ -101,8 +100,6 @@ FROM
     cte_Persona A
     INNER JOIN cte_Telefonos B ON A.IdPersona = B.IdPersona
     INNER JOIN cte_Tarjeta C ON C.IdCliente = A.IdPersona
-WHERE
-	A.Departamento IN ('MANAGUA')
 
 SELECT * FROM #TempData A
 
