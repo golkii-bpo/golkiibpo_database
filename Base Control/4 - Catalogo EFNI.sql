@@ -75,9 +75,9 @@ AS
     FROM 
         Persona A
     WHERE
-        --A.IsWorking = 1
+        A.IsWorking = 1
 		--AND A.StatusCredex IN ('Aprobado Credex','Linea Autorizada','Linea Autorizada','Linea Autorizada')
-       A.Salario > 16000 OR A.SalarioInss > 16000
+        --A.Salario > 16000 OR A.SalarioInss > 16000
 )
 
 SELECT
@@ -91,4 +91,17 @@ GROUP BY
     A.Departamento
 ORDER BY
     A.Departamento ASC
+
+
+-- UPDATE
+--     A
+-- SET
+--     A.Departamento = C.Departamento,
+--     A.Municipios = B.Municipio
+-- FROM 
+--     Persona A 
+--     INNER JOIN Demografia.Municipio B ON A.CedMunicipio = B.CodMunicipio
+--     INNER JOIN Demografia.Departamento C ON C.IdDepartamento = B.IdDepartamento
+-- WHERE 
+--     A.Departamento = NULL OR A.Departamento = ''
 
