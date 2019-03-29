@@ -84,6 +84,7 @@ AS
         AND A.Estado = 1
         AND A.Departamento = 'MANAGUA'
 )
+
 SELECT TOP 2000
 	A.Nombre,
 	A.Cedula,

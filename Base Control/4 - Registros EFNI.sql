@@ -1,4 +1,5 @@
 
+
 IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
 BEGIN
 	DROP TABLE #TempData
@@ -81,9 +82,9 @@ AS
     FROM 
         Persona A
     WHERE
-        --A.IsWorking = 1
-		--AND A.StatusCredex IN ('Aprobado Credex','Linea Autorizada','Linea Autorizada','Linea Autorizada')
-       A.Salario > 16000 OR A.SalarioInss > 16000
+        A.IsWorking = 1
+        AND (A.Salario>16000 OR A.SalarioInss > 16000)
+        AND A.Departamento IN ('MASAYA','GRANADA')
 )
 
 SELECT TOP 2500
@@ -102,8 +103,6 @@ FROM
     cte_Persona A
     INNER JOIN cte_Telefonos B ON A.IdPersona = B.IdPersona
     INNER JOIN cte_Tarjeta C ON C.IdCliente = A.IdPersona
-WHERE
-	A.Departamento IN ('MANAGUA')
 
 SELECT * FROM #TempData A
 

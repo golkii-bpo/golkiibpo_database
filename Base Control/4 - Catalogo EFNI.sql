@@ -75,9 +75,8 @@ AS
     FROM 
         Persona A
     WHERE
-        --A.IsWorking = 1
-		--AND A.StatusCredex IN ('Aprobado Credex','Linea Autorizada','Linea Autorizada','Linea Autorizada')
-       A.Salario > 16000 OR A.SalarioInss > 16000
+        A.IsWorking = 1
+        AND (A.Salario>16000 OR A.SalarioInss > 16000)
 )
 
 SELECT

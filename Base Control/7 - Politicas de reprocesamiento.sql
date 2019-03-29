@@ -240,3 +240,27 @@ SELECT * FROM
 ) A
 ORDER BY
     A.Registros DESC
+
+/*
+	VALIDACION DE TIPIFICACION QUE ESTAN DESPUES DE 2 MESES 
+*/
+
+DECLARE @IdCampaign AS VARCHAR(8) SET @IdCampaign = 'EFNI'
+
+SELECT
+	*
+FROM
+(
+	SELECT 
+		A.IdTipificacion,
+		COUNT(1) [Registros] 
+	FROM 
+		TelefonosPerCampaign A 
+	WHERE 
+		A.IdCampaign = @IdCampaign 
+		AND CAST(A.LastCalled AS DATE) <= CAST( DATEADD(MONTH,-2,GETDATE()) AS DATE)
+		AND A.Disponible = 0
+	GROUP BY
+		A.IdTipificacion
+) A
+ORDER BY A.Registros DESC
