@@ -1,5 +1,3 @@
-
-
 IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
 BEGIN
 	DROP TABLE #TempData
@@ -83,11 +81,12 @@ AS
         Persona A
     WHERE
         A.IsWorking = 1
-        AND (A.Salario>16000 OR A.SalarioInss > 16000)
-        AND A.Departamento IN ('MASAYA','GRANADA')
+        AND (A.Salario>11000 OR A.SalarioInss > 11000)
+        AND A.Estado = 1
+        AND A.Departamento = 'CARAZO'
 )
 
-SELECT TOP 2500
+SELECT TOP 1000
 	A.Nombre,
 	A.Cedula,
 	A.Domicilio,

@@ -1,4 +1,6 @@
-DECLARE @IdCampaign VARCHAR(8) SET @IdCampaign = 'EFNI'
+DECLARE @IdCampaign VARCHAR(8) SET @IdCampaign = 'AsistFam';
+DECLARE @IdCampaignCompare VARCHAR(8) SET @IdCampaignCompare = 'EFNI';
+DECLARE @FechaMarcado DATE SET @FechaMarcado = DATEADD(MONTH,-3,GETDATE());
 ;WITH cte_TelefonosLlamados
 AS
 (
@@ -33,9 +35,9 @@ AS
         TelefonosPerCampaign A 
         INNER JOIN Telefonos B ON A.IdTelefono = B.IdTelefono
     WHERE 
-        A.IdCampaign = @IdCampaign 
+        A.IdCampaign = @IdCampaignCompare 
         AND STR(B.Telefono,8,0) LIKE '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
-        AND A.Disponible = 1
+        AND A.LastCalled <= @FechaMarcado
         AND B.Estado = 1
 ),cte_Telefonos
 AS
@@ -76,7 +78,6 @@ AS
         Persona A
     WHERE
         A.IsWorking = 1
-        AND (A.Salario>16000 OR A.SalarioInss > 16000)
         AND A.Estado = 1
 )
 
@@ -91,4 +92,3 @@ GROUP BY
     A.Departamento
 ORDER BY
     A.Departamento ASC
-

@@ -4,8 +4,10 @@ BEGIN
 	DROP TABLE #TempData
 END
 
-DECLARE @IdCampaign VARCHAR(8) SET @IdCampaign = 'AsistFam'
-;WITH cte_TelefonosLlamados
+DECLARE @IdCampaign VARCHAR(8) SET @IdCampaign = 'AsistFam';
+DECLARE @IdCampaignCompare VARCHAR(8) SET @IdCampaignCompare = 'EFNI';
+DECLARE @FechaMarcado DATE SET @FechaMarcado = DATEADD(MONTH,-3,GETDATE());
+WITH cte_TelefonosLlamados
 AS
 (
     SELECT 
@@ -39,9 +41,9 @@ AS
         TelefonosPerCampaign A 
         INNER JOIN Telefonos B ON A.IdTelefono = B.IdTelefono
     WHERE 
-        A.IdCampaign = @IdCampaign
+        A.IdCampaign = @IdCampaignCompare 
         AND STR(B.Telefono,8,0) LIKE '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
-        AND A.Disponible = 1
+        AND A.LastCalled <= @FechaMarcado
         AND B.Estado = 1
 ),cte_Telefonos
 AS
@@ -66,7 +68,9 @@ AS
     FROM 
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
-    WHERE a.IdCliente IS NOT NULL AND A.IdBancos BETWEEN 1 AND 5
+    WHERE 
+        a.IdCliente IS NOT NULL 
+        AND A.IdBancos BETWEEN 1 AND 5
 ),cte_Tarjeta(IdCliente,Banco)
 AS
 (
@@ -80,11 +84,10 @@ AS
         Persona A
     WHERE
         A.IsWorking = 1
-        AND (A.Salario > 18000 OR A.SalarioInss > 18000)
         AND A.Estado = 1
 )
 
-SELECT TOP 2000
+SELECT TOP 2500
 	A.Nombre,
 	A.Cedula,
 	A.Domicilio,
@@ -105,10 +108,7 @@ SELECT * FROM #TempData A
 
 GO
 
-DECLARE 
-	@IdCampaign AS VARCHAR(8)
-
-SET @IdCampaign = 'AsistFam'
+DECLARE @IdCampaign AS VARCHAR(8) SET @IdCampaign = 'AsistFam'
 /*SE HACE UPDATE A LOS TELEFONOS PARA QUE NO SE VUELVAN A LLAMAR*/
 
 UPDATE
