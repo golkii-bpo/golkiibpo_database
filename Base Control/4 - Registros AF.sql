@@ -82,7 +82,6 @@ AS
         A.IsWorking = 1
         AND (A.Salario > 18000 OR A.SalarioInss > 18000)
         AND A.Estado = 1
-        AND A.Departamento = 'MANAGUA'
 )
 
 SELECT TOP 2000
