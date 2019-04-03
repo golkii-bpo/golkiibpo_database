@@ -85,10 +85,10 @@ AS
         A.IsWorking = 1
         AND (A.Salario>11000 OR A.SalarioInss > 11000)
         AND A.Estado = 1
-        AND A.Departamento IN ('LEON','CHINANDEGA')
+        AND A.Departamento IN ('MANAGUA')
 )
 
-SELECT TOP 2500
+SELECT TOP 1000
 	A.Nombre,
 	A.Cedula,
 	A.Domicilio,
