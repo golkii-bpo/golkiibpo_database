@@ -37,6 +37,8 @@ AS
         AND STR(B.Telefono,8,0) LIKE '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
         AND A.Disponible = 1
         AND B.Estado = 1
+        AND A.LastCalled IS NULL --AQUI SE VALIDA SI EL TELEFONO NUNCA SE HA LLAMADO
+        AND A.CalledCount IS NULL --SEGUNDA VALIDACION
 ),cte_Telefonos
 AS
 (
@@ -76,7 +78,7 @@ AS
         Persona A
     WHERE
         A.IsWorking = 1
-        AND (A.Salario>16000 OR A.SalarioInss > 16000)
+        AND (A.Salario>11000 OR A.SalarioInss > 11000)
         AND A.Estado = 1
 )
 
@@ -91,4 +93,3 @@ GROUP BY
     A.Departamento
 ORDER BY
     A.Departamento ASC
-
