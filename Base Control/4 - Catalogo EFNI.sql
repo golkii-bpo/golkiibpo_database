@@ -37,8 +37,8 @@ AS
         AND STR(B.Telefono,8,0) LIKE '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
         AND A.Disponible = 1
         AND B.Estado = 1
-        AND A.LastCalled IS NULL --AQUI SE VALIDA SI EL TELEFONO NUNCA SE HA LLAMADO
-        AND A.CalledCount IS NULL --SEGUNDA VALIDACION
+        --AND A.LastCalled IS NULL
+        --AND A.CalledCount IS NULL
 ),cte_Telefonos
 AS
 (
@@ -57,7 +57,7 @@ AS
 (
 	SELECT 
         A.IdCliente,
-        ROW_NUMBER() OVER (PARTITION BY A.IdCliente ORDER BY A.IdBancos ASC) [Registros],
+        ROW_NUMBER() OVER (PARTITION BY A.IdCliente ORDER BY A.IdBancos DESC) [Registros],
         B.Banco 
     FROM 
         dbo.Tarjetas A 
@@ -78,7 +78,7 @@ AS
         Persona A
     WHERE
         A.IsWorking = 1
-        AND (A.Salario>11000 OR A.SalarioInss > 11000)
+        AND A.StatusCredex IN ('Linea Autorizada','Cancelado','Verificado','Linea Inactiva','Linea Bloqueada','En Proceso','Aprobado Credex')
         AND A.Estado = 1
 )
 
@@ -93,3 +93,6 @@ GROUP BY
     A.Departamento
 ORDER BY
     A.Departamento ASC
+
+
+

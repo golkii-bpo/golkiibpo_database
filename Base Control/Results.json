@@ -1,70 +1,70 @@
 [
   {
     "Departamento": "BOACO",
-    "Menu": 11
+    "Menu": 15
   },
   {
     "Departamento": "CARAZO",
-    "Menu": 844
+    "Menu": 849
   },
   {
     "Departamento": "CHINANDEGA",
-    "Menu": 781
+    "Menu": 1507
   },
   {
     "Departamento": "CHONTALES",
-    "Menu": 6
+    "Menu": 25
   },
   {
-    "Departamento": "ESTELI                                            ",
-    "Menu": 830
+    "Departamento": "ESTELI",
+    "Menu": 28
   },
   {
     "Departamento": "GRANADA",
-    "Menu": 844
+    "Menu": 722
   },
   {
     "Departamento": "JINOTEGA",
-    "Menu": 435
+    "Menu": 139
   },
   {
     "Departamento": "LEON",
-    "Menu": 1158
+    "Menu": 1917
   },
   {
     "Departamento": "MADRIZ",
-    "Menu": 218
+    "Menu": 2
   },
   {
     "Departamento": "MANAGUA",
-    "Menu": 33877
+    "Menu": 6847
   },
   {
     "Departamento": "MASAYA",
-    "Menu": 1632
+    "Menu": 947
   },
   {
     "Departamento": "MATAGALPA",
-    "Menu": 1651
+    "Menu": 754
   },
   {
     "Departamento": "NUEVA SEGOVIA",
-    "Menu": 466
+    "Menu": 85
   },
   {
-    "Departamento": "RAAN                                              ",
-    "Menu": 1669
+    "Departamento": "RAAN",
+    "Menu": 239
   },
   {
     "Departamento": "RAAS",
-    "Menu": 655
+    "Menu": 38
   },
   {
     "Departamento": "RIO SAN JUAN",
-    "Menu": 762
+    "Menu": 113
   },
   {
     "Departamento": "RIVAS",
-    "Menu": 550
+    "Menu": 439
   }
 ]

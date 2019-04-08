@@ -170,20 +170,34 @@ END
 
 GO
 
-ALTER PROCEDURE Politicas.ReprocesamientoLeadsOffBase
+CREATE PROCEDURE Politicas.ReprocesamientoLeadsOffBase
 AS
 BEGIN
-
-	;WITH cte_TelefonosD
+	/*SE DECLARA CONFIGURACION PARA EL REPROCESO DE LOS NEW LEADS CON BASE DE DATOS APAGADA*/
+	DECLARE @Fecha AS DATE SET @Fecha = DATEADD(DAY,-8,GETDATE());
+	DECLARE @EXECUTE AS VARCHAR(MAX) SET @EXECUTE = CONCAT('CALL EliminarNewLeadsOffBase(''',CONVERT(VARCHAR,@Fecha,120),''');');
+	;WITH cte_TelefonosD /*SE DECLARA UN CTE GENERAL QUE MANDA A TRAER  TODOS LOS TELEFONOS CON STATUS NEW Y CON LA BASE APAGADA*/
 	AS
 	(
-		SELECT CAST(a.phone_number AS VARCHAR(MAX)) [Telefono], CAST(a.alt_phone AS VARCHAR(MAX)) [Alt_phone],a.campaign_id COLLATE Modern_Spanish_CI_AS [IdCampaign] 
-		FROM OPENQUERY(VICIDIAL,'select a.phone_number,a.alt_phone,b.campaign_id from vicidial_list a inner join vicidial_lists b on a.list_id = b.list_id where a.`status` = ''NEW'' and b.active = ''N''') a
-	),cte_Telefonos (Telefono,IdCampaign)
+		SELECT 
+			CAST(a.phone_number AS VARCHAR(MAX)) [Telefono], 
+			CAST(a.alt_phone AS VARCHAR(MAX)) [Alt_phone],
+			a.campaign_id COLLATE Modern_Spanish_CI_AS [IdCampaign],
+			CAST(a.entry_date AS DATE) [Fecha]
+		FROM 
+			OPENQUERY(VICIDIAL,'select a.phone_number,a.alt_phone,b.campaign_id,a.entry_date from vicidial_list a inner join vicidial_lists b on a.list_id = b.list_id where a.`status` = ''NEW'' and b.active = ''N''') a
+	),cte_Telefonos (Telefono,IdCampaign) /*SE FILTRA LA DATA VS LAS POLITICAS DE REPROCESAMIENTO*/
 	AS
 	(
-		SELECT CAST(UPVT.Tel AS INT),UPVT.IdCampaign FROM cte_TelefonosD A UNPIVOT (Tel FOR Registros IN (Telefono,Alt_phone)) UPVT WHERE UPVT.Tel LIKE '[2,5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
-	),cte_DataTelefono
+		SELECT 
+			CAST(UPVT.Tel AS INT),
+			UPVT.IdCampaign 
+		FROM 
+			(SELECT * FROM cte_TelefonosD A WHERE A.Fecha <= @Fecha) A 
+			UNPIVOT (Tel FOR Registros IN (Telefono,Alt_phone)) UPVT 
+		WHERE 
+			UPVT.Tel LIKE '[2,5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+	),cte_DataTelefono /*OBTENEMOS LOS REGISTROS QUE VAMOS A MODIFICAR*/
 	AS
 	(
 		SELECT 
@@ -196,8 +210,16 @@ BEGIN
 				WHERE B.Telefono = A.Telefono AND C.IdCampaign = A.IdCampaign
 			) B
 	)
-	UPDATE B SET B.Disponible = 1 FROM cte_DataTelefono A INNER JOIN TelefonosPerCampaign B ON A.IdTelefonoPorCamp = B.IdTelefonoPorCamp WHERE B.Disponible = 0
-END
+	UPDATE 
+		B 
+	SET 
+		B.Disponible = 1 
+	FROM 
+		cte_DataTelefono A 
+		INNER JOIN TelefonosPerCampaign B ON A.IdTelefonoPorCamp = B.IdTelefonoPorCamp 
+	WHERE B.Disponible = 0 /*SE ACTUALIZA LOS TELEFONO POR CAMPAÑIA*/
+	EXECUTE (@EXECUTE) AT VICIDIAL /*SE MANDAN A LIMPIAR TODOS LOS REGISTROS QUE SE ENCUENTRAN EN EL VICIDIAL*/
+END;
 
 
 GO
@@ -207,12 +229,10 @@ AS
 BEGIN
 	BEGIN TRANSACTION
 		BEGIN TRY
-
+			/*SE EJECUTAN LAS POLITICAS DE REPROCESAMINETO*/
 			EXECUTE Politicas.ReprocesamientoTelefonos
+			/*SE REUTILIZAN LOS REGISTROS CON STATUS NEW Y QUE LA LISTA SE ENCUENTRE APAGADA*/
 			EXECUTE Politicas.ReprocesamientoLeadsOffBase
-
-			EXECUTE ('CALL EliminarNewLeadsOffBase();') AT VICIDIAL
-
 			COMMIT TRANSACTION
 		END TRY
 		BEGIN CATCH
