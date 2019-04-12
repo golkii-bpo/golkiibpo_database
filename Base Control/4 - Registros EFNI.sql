@@ -3,7 +3,7 @@ BEGIN
 	DROP TABLE #TempData
 END
 
-DECLARE @IdCampaign VARCHAR(8) SET @IdCampaign = 'EFNI';
+DECLARE @IdCampaign VARCHAR(8) SET @IdCampaign = 'EFNI'
 ;WITH cte_TelefonosLlamados
 AS
 (
@@ -19,7 +19,7 @@ AS
 (
     SELECT 
         A.IdPersona 
-    FROM 
+    FROM
         Telefonos A 
         INNER JOIN cte_TelefonosLlamados B ON A.IdTelefono = B.IdTelefono 
     WHERE 
@@ -42,8 +42,7 @@ AS
         AND STR(B.Telefono,8,0) LIKE '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
         AND A.Disponible = 1
         AND B.Estado = 1
-        --AND A.LastCalled IS NULL
-        --AND A.CalledCount IS NULL
+        -- AND A.LastCalled IS NULL
 ),cte_Telefonos
 AS
 (
@@ -69,7 +68,7 @@ AS
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
         a.IdCliente IS NOT NULL 
-        AND A.IdBancos BETWEEN 1 AND 5
+        AND A.IdBancos = 3
 ),cte_Tarjeta(IdCliente,Banco)
 AS
 (
@@ -83,13 +82,11 @@ AS
         Persona A
     WHERE
         A.IsWorking = 1
-        AND A.StatusCredex IN ('Linea Autorizada','Cancelado','Verificado','Linea Inactiva','Linea Bloqueada','En Proceso','Aprobado Credex')
         AND A.Estado = 1
-        AND A.Departamento IN ('MANAGUA')
+        AND A.Departamento NOT IN ('MANAGUA')
 )
 
 SELECT
-    TOP 1500
 	A.Nombre,
 	A.Cedula,
 	A.Domicilio,
@@ -107,7 +104,6 @@ FROM
     INNER JOIN cte_Tarjeta C ON C.IdCliente = A.IdPersona
 
 SELECT * FROM #TempData A
-
 
 GO
 /*SE HACE UPDATE A LOS TELEFONOS PARA QUE NO SE VUELVAN A LLAMAR*/
