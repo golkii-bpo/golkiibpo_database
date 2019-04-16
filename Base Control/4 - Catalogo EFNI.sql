@@ -63,7 +63,7 @@ AS
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
         a.IdCliente IS NOT NULL 
-        AND A.IdBancos = 3
+        AND A.IdBancos BETWEEN 1 AND 5
 ),cte_Tarjeta(IdCliente,Banco)
 AS
 (
@@ -78,7 +78,7 @@ AS
     WHERE
         A.IsWorking = 1
         AND A.Estado = 1
-        AND A.Departamento NOT IN ('MANAGUA')
+        AND (a.Salario < 20000 OR a.SalarioInss < 20000)
 )
 
 SELECT

@@ -60,11 +60,10 @@ VALUES
 	('D',NULL,4),
 	('E',NULL,5)
 
-SELECT * FROM Politicas.GroupTipificaciones
-
 /*SE INGRESAN LAS TIPIFICACIONES PARA SER PROCESADAS A UN GRUPO ESPECIFICO*/
 INSERT INTO	Politicas.RelTipificionesGroup (IdGroupTipificaciones,IdCampaignStatuses,Estado)
-VALUES 
+VALUES
+	('A',80,1),
 	('A',6,1),
 	('A',58,1),
 	('A',64,1),
@@ -127,40 +126,35 @@ BEGIN
 	DECLARE
 		@Id AS INT,
 		@IdGroupTipificaciones AS VARCHAR(8),
-		@DaysWithOutCall AS TINYINT,
-		@FMAX AS DATETIME,
+		@DaysWithOutCall AS INT,
+		@FMAX AS DATE,
 		@Lote AS INT
 
 	SET @FMAX = GETDATE();
-	SELECT @Lote = MAX(A.Lote) FROM dbo.TelefonosPerCampaign A
+	SET @Lote = (SELECT  TOP 1 A.Lote FROM dbo.TelefonosPerCampaign A ORDER BY A.Lote DESC)
 	SET @Lote = ISNULL(@Lote,0) + 1;
 
 	/*REALIZAMOS UN CURSOR PARA QUE SEA MUCHO MAS LIGTH LA EJECUCION*/
 	WHILE ((SELECT TOP 1 COUNT (1) FROM #TempData A WHERE A.Procesado = 1) > 0)
 	BEGIN
 		/*ASIGNAMOS LAS VARIABLES*/
-		SELECT TOP 1
-			@Id = A.Id,
-			@IdGroupTipificaciones = A.IdGroupTipificaciones,
-			@DaysWithOutCall = A.DaysWithoutCall	 
-		FROM #TempData A WHERE a.Procesado = 1 ORDER BY A.Id ASC
+		SELECT TOP 1 @Id = A.Id, @IdGroupTipificaciones = A.IdGroupTipificaciones, @DaysWithOutCall = A.DaysWithoutCall	FROM #TempData A WHERE a.Procesado = 1 ORDER BY A.Id ASC
 
-		/*CODIGO VA AQUI*/
-		UPDATE 
+        --LÓGICA DE REPROCESAMIENTO
+        UPDATE 
 			C
 		SET 
 			C.Disponible = 1,
 			C.IsReprocessed = 1,
 			C.DateReprocessed = @FMAX,
 			C.Lote = @Lote
-		FROM 
-            Politicas.RelTipificionesGroup A 
+        FROM
+            Politicas.RelTipificionesGroup A
             INNER JOIN Vicidial.campaignStatuses B ON A.IdCampaignStatuses = B.IdCampaignStatuses
-            INNER JOIN TelefonosPerCampaign C ON C.IdTipificacion = B.IdTipificacion 
+            INNER JOIN TelefonosPerCampaign C ON C.IdTipificacion = B.IdTipificacion AND C.IdCampaign = B.CampaingId
         WHERE 
             A.IdGroupTipificaciones = @IdGroupTipificaciones
-            AND @DaysWithOutCall <= DATEDIFF(DAY,C.LastCalled,@FMAX)
-            AND C.IdCampaign = B.CampaingId
+            AND CAST(C.LastCalled AS DATE) <= DATEADD(DAY,(-1*@DaysWithOutCall),@FMAX)
             AND C.Disponible = 0
 
 		/*VAMOS RESTANDO LOS REGISTROS PARA IR PROGRESANDO CON EL CURSOR*/
@@ -210,6 +204,7 @@ BEGIN
 				WHERE B.Telefono = A.Telefono AND C.IdCampaign = A.IdCampaign
 			) B
 	)
+
 	UPDATE 
 		B 
 	SET 
@@ -277,8 +272,8 @@ FROM
 	FROM 
 		TelefonosPerCampaign A 
 	WHERE 
-		A.IdCampaign = @IdCampaign 
-		AND CAST(A.LastCalled AS DATE) <= CAST( DATEADD(MONTH,-2,GETDATE()) AS DATE)
+		A.IdCampaign = 'EFNI' 
+		AND CAST(A.LastCalled AS DATE) <= CAST( DATEADD(DAY,-60,GETDATE()) AS DATE)
 		AND A.Disponible = 0
 	GROUP BY
 		A.IdTipificacion
