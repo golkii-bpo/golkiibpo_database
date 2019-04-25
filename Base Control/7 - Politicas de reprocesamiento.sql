@@ -279,3 +279,17 @@ FROM
 		A.IdTipificacion
 ) A
 ORDER BY A.Registros DESC
+
+DECLARE @IdCampaign AS VARCHAR(8) SET @IdCampaign = 'EFNI'
+
+UPDATE
+	A
+SET
+	A.Disponible = 1
+FROM 
+	TelefonosPerCampaign A 
+WHERE 
+	A.IdCampaign = 'EFNI' 
+	AND CAST(A.LastCalled AS DATE) <= CAST( DATEADD(DAY,-90,GETDATE()) AS DATE)
+	AND A.Disponible = 0
+	AND A.IdTipificacion NOT IN('NIEL','DNC')
