@@ -2,6 +2,7 @@ IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
 BEGIN
 	DROP TABLE #TempData
 END
+--- FROM HERE
 
 DECLARE @IdCampaign VARCHAR(8) SET @IdCampaign = 'EFNI'
 ;WITH cte_TelefonosLlamados
@@ -68,7 +69,9 @@ AS
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
         a.IdCliente IS NOT NULL 
-        AND A.IdBancos BETWEEN 1 AND 5
+        AND (A.IdBancos BETWEEN 1 AND 5 
+            AND A.IdBancos != 6)
+
 ),cte_Tarjeta(IdCliente,Banco)
 AS
 (
@@ -83,15 +86,20 @@ AS
     WHERE
         A.IsWorking = 1
         AND A.Estado = 1
-        AND (a.Salario > 20000 OR a.SalarioInss > 20000)
+        AND A.SalarioInss >= 18000
         AND A.Departamento = 'MANAGUA'
 )
+---- TO HERE
 
 SELECT TOP 1500
+
 	A.Nombre,
 	A.Cedula,
 	A.Domicilio,
-	A.Salario,
+	CASE 
+        WHEN A.Salario IS NULL OR A.SalarioInss > A.Salario THEN A.SalarioInss
+        ELSE A.Salario
+    END [Salario],
 	A.Departamento,
 	A.Municipios,
 	B.Telefono,

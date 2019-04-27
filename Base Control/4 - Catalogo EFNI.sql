@@ -1,3 +1,4 @@
+
 DECLARE @IdCampaign VARCHAR(8) SET @IdCampaign = 'EFNI'
 ;WITH cte_TelefonosLlamados
 AS
@@ -63,7 +64,9 @@ AS
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
         a.IdCliente IS NOT NULL 
-        AND A.IdBancos BETWEEN 1 AND 5
+        AND (A.IdBancos BETWEEN 1 AND 5 
+            AND A.IdBancos != 6)
+
 ),cte_Tarjeta(IdCliente,Banco)
 AS
 (
@@ -78,8 +81,9 @@ AS
     WHERE
         A.IsWorking = 1
         AND A.Estado = 1
-        AND (a.Salario < 20000 OR a.SalarioInss < 20000)
+        AND A.SalarioInss >= 18000
 )
+
 
 SELECT
     A.Departamento,
@@ -91,6 +95,6 @@ FROM
 GROUP BY
     A.Departamento
 ORDER BY
-    A.Departamento ASC
+    [MENU] ASC
 
 
