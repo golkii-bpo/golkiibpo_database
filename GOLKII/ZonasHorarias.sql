@@ -109,7 +109,38 @@ VALUES
     9   -- ZONA HORARIA
 )
 
+
+
+update   GOLKII.dbo.ZonaHorariaReloj
+SET
+    inSun= '00:00',outSun= '00:00',    -- DOMINGO
+    inMon= '07:30',outMon= '20:30',    -- LUNES
+    InTue= '07:30',outTue= '20:30',    -- MARTES
+    inWen= '07:30',outWen= '20:30',    -- MIERCOLES
+    inThu= '07:30',outThu= '20:30',    -- JUEVES
+    inFri= '07:30',outFri= '20:30',    -- VIERNES
+    inSat= '00:00',outSat= '00:00'     -- SABADO
+WHERE   id=13
+
 */
+
+
+INSERT INTO ZonaHorariaReloj
+(   id,
+    inSun,outSun,
+    inMon,outMon,
+    )
+VALUES
+(
+    14,                 -- ID
+    '00:00','00:00',    -- DOMINGO
+    '07:00','20:00',    -- LUNES
+    '07:00','20:00',    -- MARTES
+    '07:00','20:00',    -- MIERCOLES
+    '07:00','20:00',    -- JUEVES
+    '07:00','20:00',    -- VIERNES
+    '07:00','20:00'     -- SABADO
+)
 
 SELECT 
     A.Cargo,

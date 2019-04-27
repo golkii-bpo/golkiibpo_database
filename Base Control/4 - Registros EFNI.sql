@@ -3,6 +3,7 @@ IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
 BEGIN
 	DROP TABLE #TempData
 END
+--- FROM HERE
 
 DECLARE @IdCampaign VARCHAR(8) SET @IdCampaign = 'EFNI'
 ;WITH cte_TelefonosLlamados
@@ -68,7 +69,9 @@ AS
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
         a.IdCliente IS NOT NULL 
-        AND A.IdBancos BETWEEN 1 AND 5
+        AND (A.IdBancos BETWEEN 1 AND 5 
+            AND A.IdBancos != 6)
+
 ),cte_Tarjeta(IdCliente,Banco)
 AS
 (
@@ -81,16 +84,21 @@ AS
     FROM 
         Persona A
     WHERE
-        --A.IsWorking = 1
-		--AND A.StatusCredex IN ('Aprobado Credex','Linea Autorizada','Linea Autorizada','Linea Autorizada')
-       A.Salario > 16000 OR A.SalarioInss > 16000
+        A.IsWorking = 1
+        AND A.Estado = 1
+        AND A.SalarioInss >= 18000
+        AND A.Departamento = 'MANAGUA'
 )
+---- TO HERE
 
-SELECT TOP 2500
+SELECT top 2000
 	A.Nombre,
 	A.Cedula,
 	A.Domicilio,
-	A.Salario,
+	CASE 
+        WHEN A.Salario IS NULL OR A.SalarioInss > A.Salario THEN A.SalarioInss
+        ELSE A.Salario
+    END [Salario],
 	A.Departamento,
 	A.Municipios,
 	B.Telefono,
@@ -102,8 +110,6 @@ FROM
     cte_Persona A
     INNER JOIN cte_Telefonos B ON A.IdPersona = B.IdPersona
     INNER JOIN cte_Tarjeta C ON C.IdCliente = A.IdPersona
-WHERE
-	A.Departamento IN ('MANAGUA')
 
 SELECT * FROM #TempData A
 
