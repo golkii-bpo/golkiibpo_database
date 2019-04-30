@@ -1,3 +1,10 @@
+
+IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
+BEGIN
+	DROP TABLE #TempData
+END
+--- FROM HERE
+
 -- ESTE CTE ENUMERA CADA UNO DE LOS TELEFONOS QUE POSEE UNA PERSONA SIEMPRE Y CUANDO ESTOS 
 -- PERTENEZCAN A LA CAMPAÑA INDICADA,
 -- TENGAN EL FORMATO DE NUMERO CORRECTO
@@ -13,7 +20,12 @@ as
         TelefonosPerCampaign a 
         inner join Telefonos b on a.IdTelefono = b.IdTelefono 
     where 
-        a.IdCampaign = 'EFNI' and a.Disponible = 1 and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' and b.Estado = 1 and a.Estado = 1
+        a.IdCampaign = 'EFNI' 
+        and a.Disponible = 1 
+        and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' 
+        and b.Estado = 1 
+        and a.Estado = 1
+        AND b.IdProcedencia != 3
 ),
 -- ESTE CTE VALIDA CUALES SON LOS ID DE PERSONA UNICOS A PARTIR DEL CTE ANTERIOR
 cte_PersonaDisponibles
@@ -45,8 +57,9 @@ AS
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
-        (A.IdBancos BETWEEN 1 AND 5)
-
+        (A.IdBancos BETWEEN 1 AND 5
+        AND A.IdBancos != 6
+        )
 ),
 -- ESTE CTE PIVOTEA LOS BANCOS ASOCIADOS A CADA PERSONA
 cte_Tarjeta(IdCliente,Banco)
@@ -69,25 +82,28 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-         and a.SalarioInss >= 15000
-        -- and a.Departamento in ('MANAGUA')
+        -- and a.SalarioInss >= 15000
+        and a.Departamento in ('MANAGUA','MASAYA')
         AND A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
-
 -- MENU
-SELECT  A.Departamento,
-        COUNT(A.IdPersona) [MENU]
-FROM cte_Personas A
-inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
-inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
-GROUP BY A.Departamento
-ORDER BY [MENU]
+-- SELECT  A.Departamento,
+--         COUNT(A.IdPersona) [MENU]
+-- FROM cte_Personas A
+-- inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+-- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+-- GROUP BY A.Departamento
+-- ORDER BY [MENU]
 
 -- Carga de base
-select TOP 1100
+select TOP 1500
     a.Nombre,
     a.Cedula,
     a.Domicilio,
+	CASE 
+        WHEN A.Salario IS NULL OR A.SalarioInss > A.Salario THEN A.SalarioInss
+        ELSE A.Salario
+    END [Salario],
     a.Departamento,
     a.Municipios,
     c.Telefono,
@@ -97,7 +113,7 @@ INTO
 	#TempData
 from
     cte_Personas a
-    inner join cte_Tarjeta b on b.IdCliente = a.IdPersona
+    left join cte_Tarjeta b on b.IdCliente = a.IdPersona
     inner join cte_Telefonos c on c.IdPersona = a.IdPersona
 
 
@@ -124,12 +140,3 @@ INSERT INTO dbo.RegistroLlamadas (IdPersona,IdCampania,Telefono,Alt_Phone)
 SELECT B.IdPersona,1,A.Telefono,A.Alt_Phone FROM #TempData A INNER JOIN dbo.Persona B ON B.Cedula = A.Cedula
 
 DROP TABLE #TempData
-
-
-
-
-
-
-
-
-
