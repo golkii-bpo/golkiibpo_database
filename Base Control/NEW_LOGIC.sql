@@ -1,3 +1,7 @@
+if(object_id('#TempData') is not null)
+begin
+    drop table #TempData
+end
 -- ESTE CTE ENUMERA CADA UNO DE LOS TELEFONOS QUE POSEE UNA PERSONA SIEMPRE Y CUANDO ESTOS 
 -- PERTENEZCAN A LA CAMPAÑA INDICADA,
 -- TENGAN EL FORMATO DE NUMERO CORRECTO
@@ -44,8 +48,8 @@ AS
     FROM 
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
-    WHERE 
-        (A.IdBancos BETWEEN 1 AND 5)
+    -- WHERE 
+    --     (A.IdBancos BETWEEN 1 AND 5)
 
 ),
 -- ESTE CTE PIVOTEA LOS BANCOS ASOCIADOS A CADA PERSONA
@@ -69,22 +73,22 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-         and a.SalarioInss >= 15000
-        -- and a.Departamento in ('MANAGUA')
-        AND A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
+        and a.SalarioInss >= 15000
+        and a.Departamento in ('MANAGUA')
+        and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
 -- MENU
-SELECT  A.Departamento,
-        COUNT(A.IdPersona) [MENU]
-FROM cte_Personas A
-inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
-inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
-GROUP BY A.Departamento
-ORDER BY [MENU]
+--SELECT  A.Departamento,
+--        COUNT(A.IdPersona) [MENU]
+--FROM cte_Personas A
+--inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+--inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+--GROUP BY A.Departamento
+--ORDER BY [MENU]
 
 -- Carga de base
-select TOP 1100
+select TOP 2000
     a.Nombre,
     a.Cedula,
     a.Domicilio,
@@ -97,10 +101,9 @@ INTO
 	#TempData
 from
     cte_Personas a
-    inner join cte_Tarjeta b on b.IdCliente = a.IdPersona
+    left join cte_Tarjeta b on b.IdCliente = a.IdPersona
     inner join cte_Telefonos c on c.IdPersona = a.IdPersona
-
-
+    
 select * from #TempData
 
 
