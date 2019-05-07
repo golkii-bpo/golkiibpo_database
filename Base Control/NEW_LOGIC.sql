@@ -48,8 +48,8 @@ AS
     FROM 
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
-    -- WHERE 
-    --     (A.IdBancos BETWEEN 1 AND 5)
+    WHERE 
+        A.IdBancos BETWEEN 1 AND 7
 
 ),
 -- ESTE CTE PIVOTEA LOS BANCOS ASOCIADOS A CADA PERSONA
@@ -73,19 +73,19 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        and a.SalarioInss >= 15000
-        and a.Departamento in ('MANAGUA')
+        -- and (a.SalarioInss >= 15000 or a.Salario > 15000)
+        -- and a.Departamento in ('MANAGUA')
         and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
 -- MENU
---SELECT  A.Departamento,
---        COUNT(A.IdPersona) [MENU]
---FROM cte_Personas A
---inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
---inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
---GROUP BY A.Departamento
---ORDER BY [MENU]
+SELECT  A.Departamento,
+       COUNT(A.IdPersona) [MENU]
+FROM cte_Personas A
+inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+GROUP BY A.Departamento
+ORDER BY [MENU]
 
 -- Carga de base
 select TOP 2000
