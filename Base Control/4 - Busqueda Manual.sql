@@ -78,7 +78,7 @@
 		FROM 
 			Persona A
 		WHERE
-			-- A.IsWorking = 1
+			A.IsWorking = 1
 			-- AND A.StatusCredex IN ('Aprobado Credex','Linea Autorizada','Linea Autorizada','Linea Autorizada')
 			A.Estado = 1
 	)

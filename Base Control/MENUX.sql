@@ -25,12 +25,24 @@ AS
     group by b.IdPersona 
 )
 
-select b.Departamento,d.Banco,b.StatusCredex [Credex],COUNT(1) as [cantidad] from cte_telefonosPersona a 
-inner join Persona b on a.IdPersona = b.IdPersona 
-inner join Tarjetas c on c.IdCliente = b.IdPersona
-inner join Bancos d on d.IdBancos = c.IdBancos
-where b.Estado = 1 and b.IsWorking = 1 and d.IdBancos between 1 and 5 and b.StatusCredex is not null
-group by d.Banco,b.Departamento,b.StatusCredex
-order by b.Departamento asc,d.Banco asc
+select 
+    b.Departamento,
+    COUNT(1) as [cantidad] 
+from cte_telefonosPersona a 
+    inner join Persona b on a.IdPersona = b.IdPersona 
+    inner join Tarjetas c on c.IdCliente = b.IdPersona
+    inner join Bancos d on d.IdBancos = c.IdBancos
+where 
+    b.Estado = 1 and b.IsWorking = 1
+group by 
+    b.Departamento
+
+-- select b.Departamento,COUNT(1) as [cantidad] from cte_telefonosPersona a 
+-- inner join Persona b on a.IdPersona = b.IdPersona 
+-- inner join Tarjetas c on c.IdCliente = b.IdPersona
+-- inner join Bancos d on d.IdBancos = c.IdBancos
+-- where b.Estado = 1 and b.IsWorking = 1 and d.IdBancos between 1 and 5 and b.StatusCredex is not null
+-- group by b.Departamento
+-- order by b.Departamento asc
 
 

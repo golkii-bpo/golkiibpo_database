@@ -14,9 +14,11 @@ as
         TelefonosPerCampaign a 
         inner join Telefonos b on a.IdTelefono = b.IdTelefono 
     where 
-        a.IdCampaign = 'EFNI' and a.Disponible = 1 and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' and b.Estado = 1 and a.Estado = 1
-),
-cte_PersonaDisponibles
+        a.IdCampaign = 'EFMAX' 
+        and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' 
+        and b.Estado = 1
+        and (a.LastCalled is null or a.LastCalled > DATEADD(MONTH,-1,GETDATE()))
+),cte_PersonaDisponibles
 as
 (
     select a.IdPersona from cte_Data a group by a.IdPersona
@@ -43,7 +45,7 @@ AS
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
-        A.IdBancos BETWEEN 1 AND 5
+        (A.IdBancos BETWEEN 1 AND 5)
 
 ),
 cte_Tarjeta(IdCliente,Banco)
@@ -62,9 +64,9 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        and a.SalarioInss >= 15000
-        and a.Departamento in ('GRANADA','RIVAS')
-        -- and a.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
+        and (a.Salario >= 15000 or a.SalarioInss >= 15000)
+        and a.Departamento in ('MANAGUA')
+        and a.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
 -- MENU
@@ -103,7 +105,7 @@ select * from #TempData
 
 
 /*SE HACE UPDATE A LOS TELEFONOS PARA QUE NO SE VUELVAN A LLAMAR*/
-DECLARE @IdCampaign AS VARCHAR(8) SET @IdCampaign = 'EFNI'
+DECLARE @IdCampaign AS VARCHAR(8) SET @IdCampaign = 'EFMAX'
 UPDATE
 	D
 SET
