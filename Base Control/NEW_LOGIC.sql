@@ -2,10 +2,7 @@ if(object_id('#TempData') is not null)
 begin
     drop table #TempData
 end
--- ESTE CTE ENUMERA CADA UNO DE LOS TELEFONOS QUE POSEE UNA PERSONA SIEMPRE Y CUANDO ESTOS 
--- PERTENEZCAN A LA CAMPAÑA INDICADA,
--- TENGAN EL FORMATO DE NUMERO CORRECTO
--- EL NUMERO ESTE ACTIVO Y DISPONIBLE TANTO PARA LA CAMPAÑA COMO A NIVEL GENERAL
+
 ;with cte_Data
 as
 (
@@ -19,13 +16,11 @@ as
     where 
         a.IdCampaign = 'EFNI' and a.Disponible = 1 and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' and b.Estado = 1 and a.Estado = 1
 ),
--- ESTE CTE VALIDA CUALES SON LOS ID DE PERSONA UNICOS A PARTIR DEL CTE ANTERIOR
 cte_PersonaDisponibles
 as
 (
     select a.IdPersona from cte_Data a group by a.IdPersona
 ),
--- ESTE CTE PIVOTEA LOS NUMEROS DE TELEFONO DE CADA PERSONA 
 cte_Telefonos
 AS
 (
@@ -37,7 +32,6 @@ AS
         cte_Data A 
         PIVOT (MAX(A.Telefono) FOR A.Registros IN ([1],[2],[3])) PVT
 ),
---ESTE CTE BUSCA TODOS LOS BANCOS ASOCIADOS A LAS PERSONAS OBTENIDAS DURANTE EL PROCESAMIENTO DE LA INFORMACION
 cte_DataTarjeta (IdCliente,Registros,Banco)
 AS
 (
@@ -49,19 +43,14 @@ AS
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
-        A.IdBancos BETWEEN 1 AND 7
+        A.IdBancos BETWEEN 1 AND 5
 
 ),
--- ESTE CTE PIVOTEA LOS BANCOS ASOCIADOS A CADA PERSONA
 cte_Tarjeta(IdCliente,Banco)
 AS
 (
 	SELECT pvt.IdCliente,[1] [Banco] FROM cte_DataTarjeta x PIVOT ( max(x.Banco) FOR x.Registros IN ([1]) ) pvt
 ),
--- ESTE CTE SELECCIONA TODOS LOS DATOS DE UNA PERSONA DISPONIBLE
--- COMPRUEBA QUE ESTE ACTIVA EN INSS
--- SEA UN CLIENTE ACTIVO
--- SALARIO,DEPARTAMENTO Y STATUS CREDEX TENGA PARAMETRO ESTABLECIDO
 cte_Personas
 as
 (
@@ -73,27 +62,28 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        -- and (a.SalarioInss >= 15000 or a.Salario > 15000)
-        -- and a.Departamento in ('MANAGUA')
-        and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
+        and a.SalarioInss >= 15000
+        and a.Departamento in ('MANAGUA')
+        -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
 -- MENU
-SELECT  A.Departamento,
-       COUNT(A.IdPersona) [MENU]
-FROM cte_Personas A
-inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
-inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
-GROUP BY A.Departamento
-ORDER BY [MENU]
+-- SELECT  A.Departamento,
+--        COUNT(A.IdPersona) [MENU]
+-- FROM cte_Personas A
+-- inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+-- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+-- GROUP BY A.Departamento
+-- ORDER BY [MENU]
 
 -- Carga de base
-select TOP 2000
+select TOP 100
     a.Nombre,
     a.Cedula,
     a.Domicilio,
     a.Departamento,
     a.Municipios,
+    a.SalarioInss [Salario],
     c.Telefono,
     c.Alt_Phone,
     b.Banco
