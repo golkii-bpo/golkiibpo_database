@@ -136,20 +136,55 @@ WHERE
 	A.IdPersona != C.IdPersona
 
 
-;WITH cte_data
-AS
+-- ;WITH cte_data
+-- AS
+-- (
+-- 	select a.Cedula from BaseControl.dbo.Persona a inner join BaseControl.dbo.Tarjetas b on a.IdPersona = b.IdCliente where b.IdBancos = 7
+-- ),cte_Unique
+-- AS
+-- (
+-- 	select a.Cedula from DB_22052019 a
+-- 	except 
+-- 	select a.Cedula from cte_data a
+-- ), cte_final
+-- AS
+-- (
+-- 	select b.IdPersona From cte_Unique a inner join BaseControl.dbo.Persona b on a.Cedula = b.Cedula
+-- )
+
+-- select * from cte_final
+
+
+-- insert into BaseControl.dbo.Tarjetas (IdCliente,IdBancos,IdProcedencia,FechaIngreso,Estado)
+-- select a.IdPersona,7,1,GETDATE(),1 from cte_final a 
+
+with cte_data
+as
 (
-	select a.Cedula from BaseControl.dbo.Persona a inner join BaseControl.dbo.Tarjetas b on a.IdPersona = b.IdCliente where b.IdBancos = 7
-),cte_Unique
-AS
+	select 
+		case a.banco
+			when 'Banco Ficohsa Nicaragua, S.A' then 3
+			when 'SIMAN' then 6
+			when 'BANPRO' then 5
+			when 'BANCO DE AMERICA CENTRAL' then 1
+			when 'LA FISE' then 4
+			when 'Banco Lafise Bancentro' then 4
+			when 'BANCENTRO' then 4
+			when 'BANCO DE LA PRODUCCION S' then 5
+			when 'BANCO DE FINANZAS' then 2
+			when 'BDF' then 2
+			when 'BAC' then 1
+			when 'FICOHSA' then 3
+			else 7
+		end [IdBancos],
+		b.IdPersona [IdCliente]
+	from DB_22052019 a inner join BaseControl.dbo.Persona b on a.Cedula = b.Cedula
+),cte_unicos
+as
 (
-	select a.Cedula from DB_22052019 a
-	except 
-	select a.Cedula from cte_data a
-), cte_final
-AS
-(
-	select b.IdPersona From cte_Unique a inner join BaseControl.dbo.Persona b on a.Cedula = b.Cedula
+	select a.IdCliente,a.IdBancos from cte_data a
+	except
+	select b.IdCliente ,b.IdBancos from BaseControl.dbo.Tarjetas b
 )
-insert into BaseControl.dbo.Tarjetas (IdCliente,IdBancos,IdProcedencia,FechaIngreso,Estado)
-select a.IdPersona,7,1,GETDATE(),1 from cte_final a 
+insert into BaseControl.dbo.Tarjetas (IdCliente,IdBancos,IdProcedencia,FechaIngreso)
+select a.IdCliente,a.IdBancos,1,GETDATE() from cte_unicos a
