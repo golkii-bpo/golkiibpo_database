@@ -134,3 +134,22 @@ FROM
 	INNER JOIN BaseControl.dbo.Telefonos C ON C.Telefono = A.Telefonos 
 WHERE 
 	A.IdPersona != C.IdPersona
+
+
+;WITH cte_data
+AS
+(
+	select a.Cedula from BaseControl.dbo.Persona a inner join BaseControl.dbo.Tarjetas b on a.IdPersona = b.IdCliente where b.IdBancos = 7
+),cte_Unique
+AS
+(
+	select a.Cedula from DB_22052019 a
+	except 
+	select a.Cedula from cte_data a
+), cte_final
+AS
+(
+	select b.IdPersona From cte_Unique a inner join BaseControl.dbo.Persona b on a.Cedula = b.Cedula
+)
+insert into BaseControl.dbo.Tarjetas (IdCliente,IdBancos,IdProcedencia,FechaIngreso,Estado)
+select a.IdPersona,7,1,GETDATE(),1 from cte_final a 
