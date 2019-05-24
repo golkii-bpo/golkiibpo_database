@@ -81,6 +81,7 @@ AS
         A.IsWorking = 1
         AND A.Estado = 1
         AND A.SalarioInss >= 18000
+        AND A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
 

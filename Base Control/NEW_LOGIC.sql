@@ -82,8 +82,8 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        -- and a.SalarioInss >= 15000
-        and a.Departamento in ('MANAGUA','MASAYA')
+        and a.SalarioInss >= 10000
+        and a.Departamento in ('CHINANDEGA','LEON')
         AND A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 -- MENU
@@ -96,7 +96,7 @@ as
 -- ORDER BY [MENU]
 
 -- Carga de base
-select TOP 1500
+select top 2000
     a.Nombre,
     a.Cedula,
     a.Domicilio,
@@ -139,4 +139,3 @@ WHERE
 INSERT INTO dbo.RegistroLlamadas (IdPersona,IdCampania,Telefono,Alt_Phone)
 SELECT B.IdPersona,1,A.Telefono,A.Alt_Phone FROM #TempData A INNER JOIN dbo.Persona B ON B.Cedula = A.Cedula
 
-DROP TABLE #TempData
