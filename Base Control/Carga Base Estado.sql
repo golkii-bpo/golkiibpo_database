@@ -10,7 +10,7 @@ as
         TelefonosPerCampaign a 
         inner join Telefonos b on a.IdTelefono = b.IdTelefono 
     where 
-        a.IdCampaign = 'EFNI' and a.Disponible = 1 and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' and b.Estado = 1 and a.Estado = 1 AND B.Operadora = 'MOVISTAR'
+        a.IdCampaign = 'EFNI' and a.Disponible = 1 and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' and b.Estado = 1 and a.Estado = 1
 ),
 cte_PersonaDisponibles
 as
@@ -39,7 +39,8 @@ AS
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
-        A.IdBancos BETWEEN 1 AND 5
+        A.IdBancos BETWEEN 1 AND 7
+        AND A.IdBancos != 6
 
 ),
 cte_Tarjeta(IdCliente,Banco)
@@ -54,23 +55,30 @@ as
     from   
         Persona a 
         inner join cte_PersonaDisponibles b on a.IdPersona = b.IdPersona
-		INNER JOIN dbo.EmpresaSapas c ON c.EMPRESA = a.Trabajo
+		cross apply
+        (
+            select 
+                c.* 
+            from 
+                string_split(a.Empresas,'|') c 
+                inner join EmpresaSapas d on c.[value] = d.EMPRESA 
+        ) e
     where 
         a.IsWorking = 1
         and a.Estado = 1
         and a.SalarioInss >= 8500
-        and a.Departamento in ('LEON','CHINANDEGA')
+        -- and a.Departamento in ('LEON','CHINANDEGA')
         -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
 -- MENU
- --SELECT  A.Departamento,
- --       COUNT(A.IdPersona) [MENU]
- --FROM cte_Personas A
- --inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
- --inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
- --GROUP BY A.Departamento
- --ORDER BY [MENU]
+ SELECT  A.Departamento,
+       COUNT(A.IdPersona) [MENU]
+ FROM cte_Personas A
+ inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+ inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+ GROUP BY A.Departamento
+ ORDER BY [MENU]
 
  select TOP 2000
     a.Nombre,
