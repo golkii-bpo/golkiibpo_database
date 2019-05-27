@@ -67,7 +67,8 @@ as
         a.IsWorking = 1
         and a.Estado = 1
         and a.SalarioInss >= 8500
-        -- and a.Departamento in ('LEON','CHINANDEGA')
+        -- and a.Municipios = UPPER('bluefields')
+        -- and a.Departamento in ('MATAGALPA','JINOTEGA')
         -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
