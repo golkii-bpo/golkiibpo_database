@@ -60,11 +60,10 @@ VALUES
 	('D',NULL,4),
 	('E',NULL,5)
 
-SELECT * FROM Politicas.GroupTipificaciones
-
 /*SE INGRESAN LAS TIPIFICACIONES PARA SER PROCESADAS A UN GRUPO ESPECIFICO*/
 INSERT INTO	Politicas.RelTipificionesGroup (IdGroupTipificaciones,IdCampaignStatuses,Estado)
-VALUES 
+VALUES
+	('A',80,1),
 	('A',6,1),
 	('A',58,1),
 	('A',64,1),
@@ -127,40 +126,35 @@ BEGIN
 	DECLARE
 		@Id AS INT,
 		@IdGroupTipificaciones AS VARCHAR(8),
-		@DaysWithOutCall AS TINYINT,
-		@FMAX AS DATETIME,
+		@DaysWithOutCall AS INT,
+		@FMAX AS DATE,
 		@Lote AS INT
 
 	SET @FMAX = GETDATE();
-	SELECT @Lote = MAX(A.Lote) FROM dbo.TelefonosPerCampaign A
+	SET @Lote = (SELECT  TOP 1 A.Lote FROM dbo.TelefonosPerCampaign A ORDER BY A.Lote DESC)
 	SET @Lote = ISNULL(@Lote,0) + 1;
 
 	/*REALIZAMOS UN CURSOR PARA QUE SEA MUCHO MAS LIGTH LA EJECUCION*/
 	WHILE ((SELECT TOP 1 COUNT (1) FROM #TempData A WHERE A.Procesado = 1) > 0)
 	BEGIN
 		/*ASIGNAMOS LAS VARIABLES*/
-		SELECT TOP 1
-			@Id = A.Id,
-			@IdGroupTipificaciones = A.IdGroupTipificaciones,
-			@DaysWithOutCall = A.DaysWithoutCall	 
-		FROM #TempData A WHERE a.Procesado = 1 ORDER BY A.Id ASC
+		SELECT TOP 1 @Id = A.Id, @IdGroupTipificaciones = A.IdGroupTipificaciones, @DaysWithOutCall = A.DaysWithoutCall	FROM #TempData A WHERE a.Procesado = 1 ORDER BY A.Id ASC
 
-		/*CODIGO VA AQUI*/
-		UPDATE 
+        --LÓGICA DE REPROCESAMIENTO
+        UPDATE 
 			C
 		SET 
 			C.Disponible = 1,
 			C.IsReprocessed = 1,
 			C.DateReprocessed = @FMAX,
 			C.Lote = @Lote
-		FROM 
-            Politicas.RelTipificionesGroup A 
+        FROM
+            Politicas.RelTipificionesGroup A
             INNER JOIN Vicidial.campaignStatuses B ON A.IdCampaignStatuses = B.IdCampaignStatuses
-            INNER JOIN TelefonosPerCampaign C ON C.IdTipificacion = B.IdTipificacion 
+            INNER JOIN TelefonosPerCampaign C ON C.IdTipificacion = B.IdTipificacion AND C.IdCampaign = B.CampaingId
         WHERE 
             A.IdGroupTipificaciones = @IdGroupTipificaciones
-            AND @DaysWithOutCall <= DATEDIFF(DAY,C.LastCalled,@FMAX)
-            AND C.IdCampaign = B.CampaingId
+            AND CAST(C.LastCalled AS DATE) <= DATEADD(DAY,(-1*@DaysWithOutCall),@FMAX)
             AND C.Disponible = 0
 
 		/*VAMOS RESTANDO LOS REGISTROS PARA IR PROGRESANDO CON EL CURSOR*/
@@ -170,20 +164,34 @@ END
 
 GO
 
-ALTER PROCEDURE Politicas.ReprocesamientoLeadsOffBase
+CREATE PROCEDURE Politicas.ReprocesamientoLeadsOffBase
 AS
 BEGIN
-
-	;WITH cte_TelefonosD
+	/*SE DECLARA CONFIGURACION PARA EL REPROCESO DE LOS NEW LEADS CON BASE DE DATOS APAGADA*/
+	DECLARE @Fecha AS DATE SET @Fecha = DATEADD(DAY,-8,GETDATE());
+	DECLARE @EXECUTE AS VARCHAR(MAX) SET @EXECUTE = CONCAT('CALL EliminarNewLeadsOffBase(''',CONVERT(VARCHAR,@Fecha,120),''');');
+	;WITH cte_TelefonosD /*SE DECLARA UN CTE GENERAL QUE MANDA A TRAER  TODOS LOS TELEFONOS CON STATUS NEW Y CON LA BASE APAGADA*/
 	AS
 	(
-		SELECT CAST(a.phone_number AS VARCHAR(MAX)) [Telefono], CAST(a.alt_phone AS VARCHAR(MAX)) [Alt_phone],a.campaign_id COLLATE Modern_Spanish_CI_AS [IdCampaign] 
-		FROM OPENQUERY(VICIDIAL,'select a.phone_number,a.alt_phone,b.campaign_id from vicidial_list a inner join vicidial_lists b on a.list_id = b.list_id where a.`status` = ''NEW'' and b.active = ''N''') a
-	),cte_Telefonos (Telefono,IdCampaign)
+		SELECT 
+			CAST(a.phone_number AS VARCHAR(MAX)) [Telefono], 
+			CAST(a.alt_phone AS VARCHAR(MAX)) [Alt_phone],
+			a.campaign_id COLLATE Modern_Spanish_CI_AS [IdCampaign],
+			CAST(a.entry_date AS DATE) [Fecha]
+		FROM 
+			OPENQUERY(VICIDIAL,'select a.phone_number,a.alt_phone,b.campaign_id,a.entry_date from vicidial_list a inner join vicidial_lists b on a.list_id = b.list_id where a.`status` = ''NEW'' and b.active = ''N''') a
+	),cte_Telefonos (Telefono,IdCampaign) /*SE FILTRA LA DATA VS LAS POLITICAS DE REPROCESAMIENTO*/
 	AS
 	(
-		SELECT CAST(UPVT.Tel AS INT),UPVT.IdCampaign FROM cte_TelefonosD A UNPIVOT (Tel FOR Registros IN (Telefono,Alt_phone)) UPVT WHERE UPVT.Tel LIKE '[2,5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
-	),cte_DataTelefono
+		SELECT 
+			CAST(UPVT.Tel AS INT),
+			UPVT.IdCampaign 
+		FROM 
+			(SELECT * FROM cte_TelefonosD A WHERE A.Fecha <= @Fecha) A 
+			UNPIVOT (Tel FOR Registros IN (Telefono,Alt_phone)) UPVT 
+		WHERE 
+			UPVT.Tel LIKE '[2,5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+	),cte_DataTelefono /*OBTENEMOS LOS REGISTROS QUE VAMOS A MODIFICAR*/
 	AS
 	(
 		SELECT 
@@ -196,8 +204,17 @@ BEGIN
 				WHERE B.Telefono = A.Telefono AND C.IdCampaign = A.IdCampaign
 			) B
 	)
-	UPDATE B SET B.Disponible = 1 FROM cte_DataTelefono A INNER JOIN TelefonosPerCampaign B ON A.IdTelefonoPorCamp = B.IdTelefonoPorCamp WHERE B.Disponible = 0
-END
+
+	UPDATE 
+		B 
+	SET 
+		B.Disponible = 1 
+	FROM 
+		cte_DataTelefono A 
+		INNER JOIN TelefonosPerCampaign B ON A.IdTelefonoPorCamp = B.IdTelefonoPorCamp 
+	WHERE B.Disponible = 0 /*SE ACTUALIZA LOS TELEFONO POR CAMPAÑIA*/
+	EXECUTE (@EXECUTE) AT VICIDIAL /*SE MANDAN A LIMPIAR TODOS LOS REGISTROS QUE SE ENCUENTRAN EN EL VICIDIAL*/
+END;
 
 
 GO
@@ -207,12 +224,10 @@ AS
 BEGIN
 	BEGIN TRANSACTION
 		BEGIN TRY
-
+			/*SE EJECUTAN LAS POLITICAS DE REPROCESAMINETO*/
 			EXECUTE Politicas.ReprocesamientoTelefonos
+			/*SE REUTILIZAN LOS REGISTROS CON STATUS NEW Y QUE LA LISTA SE ENCUENTRE APAGADA*/
 			EXECUTE Politicas.ReprocesamientoLeadsOffBase
-
-			EXECUTE ('CALL EliminarNewLeadsOffBase();') AT VICIDIAL
-
 			COMMIT TRANSACTION
 		END TRY
 		BEGIN CATCH
@@ -240,3 +255,41 @@ SELECT * FROM
 ) A
 ORDER BY
     A.Registros DESC
+
+/*
+	VALIDACION DE TIPIFICACION QUE ESTAN DESPUES DE 2 MESES 
+*/
+
+DECLARE @IdCampaign AS VARCHAR(8) SET @IdCampaign = 'EFNI'
+
+SELECT
+	*
+FROM
+(
+	SELECT 
+		A.IdTipificacion,
+		COUNT(1) [Registros] 
+	FROM 
+		TelefonosPerCampaign A 
+	WHERE 
+		A.IdCampaign = 'EFNI' 
+		AND CAST(A.LastCalled AS DATE) <= CAST( DATEADD(DAY,-60,GETDATE()) AS DATE)
+		AND A.Disponible = 0
+	GROUP BY
+		A.IdTipificacion
+) A
+ORDER BY A.Registros DESC
+
+DECLARE @IdCampaign AS VARCHAR(8) SET @IdCampaign = 'EFNI'
+
+UPDATE
+	A
+SET
+	A.Disponible = 1
+FROM 
+	TelefonosPerCampaign A 
+WHERE 
+	A.IdCampaign = 'EFNI' 
+	AND CAST(A.LastCalled AS DATE) <= CAST( DATEADD(DAY,-90,GETDATE()) AS DATE)
+	AND A.Disponible = 0
+	AND A.IdTipificacion NOT IN('NIEL','DNC')

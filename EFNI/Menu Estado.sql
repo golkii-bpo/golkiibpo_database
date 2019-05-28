@@ -27,13 +27,11 @@ as
         and a.Estado = 1
         AND b.IdProcedencia != 3
 ),
--- ESTE CTE VALIDA CUALES SON LOS ID DE PERSONA UNICOS A PARTIR DEL CTE ANTERIOR
 cte_PersonaDisponibles
 as
 (
     select a.IdPersona from cte_Data a group by a.IdPersona
 ),
--- ESTE CTE PIVOTEA LOS NUMEROS DE TELEFONO DE CADA PERSONA 
 cte_Telefonos
 AS
 (
@@ -45,7 +43,6 @@ AS
         cte_Data A 
         PIVOT (MAX(A.Telefono) FOR A.Registros IN ([1],[2],[3])) PVT
 ),
---ESTE CTE BUSCA TODOS LOS BANCOS ASOCIADOS A LAS PERSONAS OBTENIDAS DURANTE EL PROCESAMIENTO DE LA INFORMACION
 cte_DataTarjeta (IdCliente,Registros,Banco)
 AS
 (
@@ -61,42 +58,44 @@ AS
         AND A.IdBancos != 6
         )
 ),
--- ESTE CTE PIVOTEA LOS BANCOS ASOCIADOS A CADA PERSONA
 cte_Tarjeta(IdCliente,Banco)
 AS
 (
 	SELECT pvt.IdCliente,[1] [Banco] FROM cte_DataTarjeta x PIVOT ( max(x.Banco) FOR x.Registros IN ([1]) ) pvt
-),
--- ESTE CTE SELECCIONA TODOS LOS DATOS DE UNA PERSONA DISPONIBLE
--- COMPRUEBA QUE ESTE ACTIVA EN INSS
--- SEA UN CLIENTE ACTIVO
--- SALARIO,DEPARTAMENTO Y STATUS CREDEX TENGA PARAMETRO ESTABLECIDO
-cte_Personas
+),cte_Personas
 as
 (
     select 
         a.* 
     from   
         Persona a 
-        inner join cte_PersonaDisponibles b on a.IdPersona = b.IdPersona 
+        inner join cte_PersonaDisponibles b on a.IdPersona = b.IdPersona
+		cross apply
+        (
+            select 
+                c.* 
+            from 
+                string_split(a.Empresas,'|') c 
+                inner join EmpresaSapas d on c.[value] = d.EMPRESA 
+        ) e
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        and a.SalarioInss >= 10000
-        and a.Departamento in ('CHINANDEGA','LEON')
-        AND A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
+        and a.SalarioInss >= 8500
+        -- and a.Municipios = UPPER('bluefields')
+        and a.Departamento in ('LEON','CHINANDEGA')
+        -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 -- MENU
--- SELECT  A.Departamento,
---         COUNT(A.IdPersona) [MENU]
--- FROM cte_Personas A
--- inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
--- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
--- GROUP BY A.Departamento
--- ORDER BY [MENU]
+--  SELECT  A.Departamento,
+--        COUNT(A.IdPersona) [MENU]
+--  FROM cte_Personas A
+--  inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+--  inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+--  GROUP BY A.Departamento
+--  ORDER BY [MENU]
 
--- Carga de base
-select top 2000
+ select TOP 2000
     a.Nombre,
     a.Cedula,
     a.Domicilio,
@@ -106,6 +105,7 @@ select top 2000
     END [Salario],
     a.Departamento,
     a.Municipios,
+    a.SalarioInss [Salario],
     c.Telefono,
     c.Alt_Phone,
     b.Banco
@@ -115,8 +115,7 @@ from
     cte_Personas a
     left join cte_Tarjeta b on b.IdCliente = a.IdPersona
     inner join cte_Telefonos c on c.IdPersona = a.IdPersona
-
-
+    
 select * from #TempData
 
 
@@ -139,3 +138,4 @@ WHERE
 INSERT INTO dbo.RegistroLlamadas (IdPersona,IdCampania,Telefono,Alt_Phone)
 SELECT B.IdPersona,1,A.Telefono,A.Alt_Phone FROM #TempData A INNER JOIN dbo.Persona B ON B.Cedula = A.Cedula
 
+DROP TABLE #TempData

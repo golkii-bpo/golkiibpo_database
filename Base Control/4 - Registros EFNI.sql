@@ -1,4 +1,3 @@
-
 IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
 BEGIN
 	DROP TABLE #TempData
@@ -21,7 +20,7 @@ AS
 (
     SELECT 
         A.IdPersona 
-    FROM 
+    FROM
         Telefonos A 
         INNER JOIN cte_TelefonosLlamados B ON A.IdTelefono = B.IdTelefono 
     WHERE 
@@ -44,6 +43,7 @@ AS
         AND STR(B.Telefono,8,0) LIKE '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
         AND A.Disponible = 1
         AND B.Estado = 1
+        -- AND A.LastCalled IS NULL
 ),cte_Telefonos
 AS
 (
@@ -62,7 +62,7 @@ AS
 (
 	SELECT 
         A.IdCliente,
-        ROW_NUMBER() OVER (PARTITION BY A.IdCliente ORDER BY A.IdBancos ASC) [Registros],
+        ROW_NUMBER() OVER (PARTITION BY A.IdCliente ORDER BY A.IdBancos DESC) [Registros],
         B.Banco 
     FROM 
         dbo.Tarjetas A 
@@ -91,7 +91,8 @@ AS
 )
 ---- TO HERE
 
-SELECT top 2000
+SELECT TOP 1500
+
 	A.Nombre,
 	A.Cedula,
 	A.Domicilio,

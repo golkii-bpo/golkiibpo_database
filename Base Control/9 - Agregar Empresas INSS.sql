@@ -1,0 +1,25 @@
+
+CREATE SCHEMA INSS
+GO
+CREATE FUNCTION INSS.Empresas
+(
+	@Cedula AS VARCHAR(14)
+)
+RETURNS VARCHAR(MAX)
+AS
+BEGIN
+	DECLARE @R AS VARCHAR(MAX);
+	SELECT @R = CONCAT(@R, IIF(@R IS NULL,A.EMPRESA,'|'+A.EMPRESA)) FROM REFCOMERCIAL.dbo.infoINSS A WHERE A.CEDULA = @Cedula AND A.disponible = 1
+	RETURN @R
+END
+GO
+
+UPDATE A SET A.Empresas = '' FROM dbo.Persona A
+
+;WITH cte_Personas
+AS
+(
+	SELECT A.CEDULA COLLATE Modern_Spanish_CI_AS [Cedula] FROM REFCOMERCIAL.dbo.infoINSS A WHERE A.disponible = 1 GROUP BY A.CEDULA
+)
+
+UPDATE A SET A.Empresas = INSS.Empresas(a.Cedula) FROM dbo.Persona A INNER JOIN cte_Personas B ON B.Cedula = A.Cedula

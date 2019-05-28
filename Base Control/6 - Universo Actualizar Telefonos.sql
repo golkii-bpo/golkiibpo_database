@@ -1,12 +1,9 @@
-
-
 USE BaseControl
 
 GO
 
 ALTER TABLE dbo.TelefonosPerCampaign ADD TipoBase VARCHAR(10) DEFAULT NULL
 ALTER TABLE Vicidial.campaignStatuses ADD TipoStatus VARCHAR(15)
-
 
 GO
 
@@ -23,12 +20,10 @@ BEGIN
 END
 
 GO
-
+/*FUNCION QUE PERMITE INGRESAR LAS TIPIFICACIONES DE SISTEMA*/
 CREATE PROCEDURE Vicidial.UpdateSystemStatus
 AS
 BEGIN
-
-	SELECT * FROM TelefonosPerCampaign A 
 
 	/*SE BORRA SI EL REGISTRO NO EXISTE*/
 	IF(OBJECT_ID('tempdb..#SystemStatus') IS NOT NULL)
@@ -47,29 +42,40 @@ BEGIN
 		Vicidial.CastEnumToBit(A.dnc)[dnc],
 		Vicidial.CastEnumToBit(A.unworkable)[unworkable],
 		Vicidial.CastEnumToBit(Completed)[Completed],
-		'Sistema' [TipoBase]
+		'Sistema' [TipoStatus]
 	INTO 
 		#SystemStatus 
 	FROM 
 		OPENQUERY(VICIDIAL,'select * from vicidial_statuses') A
 
+	;WITH cte_Statuses
+    AS
+    (
+        SELECT A.IdTipificacion FROM Vicidial.campaignStatuses A GROUP BY A.IdTipificacion
+    ), cte_Data
+    AS
+    (
+        SELECT 
+            A.* 
+        FROM 
+            #SystemStatus A 
+            LEFT JOIN cte_Statuses B ON A.[status] = B.IdTipificacion 
+        WHERE B.IdTipificacion IS NULL
+    )
 	INSERT INTO Vicidial.campaignStatuses 
-		(IdTipificacion,Tipificacion,CampaingId,HumanAnswered,IsSale,CustomerContact,AnsweringMachine,NotInterested,DoNotCall,UnWorkable,Completed,TipoBase)
-	SELECT
-		A.status,A.status_name,C.IdCampaign,A.human_answered,A.sale,A.customer_contact,A.answering_machine,A.not_interested,A.dnc,A.unworkable,A.Completed,A.TipoBase
-	FROM 
-		#SystemStatus A 
-		LEFT JOIN Vicidial.campaignStatuses B ON A.status = B.IdTipificacion COLLATE SQL_Latin1_General_CP1_CI_AS,
-		Vicidial.Campaigns C
-	WHERE
-		B.IdTipificacion IS NULL
+		(IdTipificacion,Tipificacion,CampaingId,HumanAnswered,IsSale,CustomerContact,AnsweringMachine,NotInterested,DoNotCall,UnWorkable,Completed,TipoStatus)
+    SELECT
+		A.status,A.status_name,C.IdCampaign,A.human_answered,A.sale,A.customer_contact,A.answering_machine,A.not_interested,A.dnc,A.unworkable,A.Completed,A.TipoStatus
+    FROM 
+        cte_Data A,
+        Vicidial.Campaigns C
 
 	DROP TABLE #SystemStatus
 END
 
 GO
 
-/*FUNCION QUE TE PERMITE ACTUALIZAR E INSERTAR LAS TIPIFICACIONES DE LAS CAMA�AS*/
+/*FUNCION QUE TE PERMITE ACTUALIZAR E INSERTAR LAS TIPIFICACIONES DE LAS CAMAPAÑAS*/
 CREATE PROCEDURE Vicidial.UpdateStatus
 AS
 BEGIN
@@ -177,6 +183,20 @@ END
 
 GO
 
+CREATE PROCEDURE Vicidial.UpdateAllStatuses
+AS
+BEGIN
+	BEGIN TRY
+		EXECUTE Vicidial.UpdateSystemStatus
+		EXECUTE Vicidial.UpdateStatus
+	END TRY
+	BEGIN CATCH
+		SELECT ERROR_MESSAGE()
+	END CATCH
+END
+
+GO
+
 /*OBTIENE TODA LA INFORMACION DE LOS NUMEROS ALMACENADA EN EL DIALER*/
 CREATE PROCEDURE Vicidial.Update_Numeros
 AS
@@ -187,6 +207,7 @@ BEGIN
 		SET @D = (SELECT TOP 1 A.LastCalled FROM dbo.TelefonosPerCampaign A ORDER BY A.LastCalled DESC);
 		SET @D = ISNULL(@D,'2018-01-01 00:00:00');
 		SET @Fecha = CONVERT(VARCHAR(25),CAST(@D AS DATETIME),120)
+
 		/*SE MANDA A CARGAR LOS TELEFONOS EN LA TABLA TEMPORAL*/
 		EXEC ('CALL GetUpdatePhones ('''+@Fecha+''')') AT VICIDIAL;
 
@@ -194,12 +215,6 @@ BEGIN
 		EXEC Vicidial.UpdatePhones;
 		/*SE DROPEA LA TABLA TEMPORAL*/
 		EXEC ('CALL DropPhones();') AT VICIDIAL;
-
-		/*
-			FALTAN 2 PROCEDIMIENTOS UNO SE VA A ENCARGA DE TRAER TODOS LOS REGISTROS CON ESTADO DE NEW LEAD CON
-			EL REGISTRO DE LA BASE DE DATOS APAGADA
-			EL OTRO PROCEDIMIENTO SE VA A ENCARGAR DE ELIMINAR LOS REGISTROS QUE ESTAN CON ESTADO DE NEW LEAD
-		*/
 		
 	END TRY
 	BEGIN CATCH
