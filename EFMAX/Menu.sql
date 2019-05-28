@@ -48,7 +48,8 @@ AS
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
-        A.IdBancos BETWEEN 1 AND 5
+        A.IdBancos BETWEEN 1 AND 7
+        AND A.IdBancos != 6
 
 ),
 cte_Tarjeta(IdCliente,Banco)
@@ -68,8 +69,8 @@ as
         a.IsWorking = 1
         and a.Estado = 1
         and a.SalarioInss >= 15000
-        and a.Departamento in ('CHINANDEGA','LEON')
-        and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
+        and a.Municipios = 'PUERTO CABEZAS'
+        -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
 -- MENU

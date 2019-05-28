@@ -68,18 +68,18 @@ as
         and a.Estado = 1
         and a.SalarioInss >= 8500
         -- and a.Municipios = UPPER('bluefields')
-        -- and a.Departamento in ('MATAGALPA','JINOTEGA')
+        and a.Departamento in ('LEON','CHINANDEGA')
         -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
 -- MENU
- SELECT  A.Departamento,
-       COUNT(A.IdPersona) [MENU]
- FROM cte_Personas A
- inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
- GROUP BY A.Departamento
- ORDER BY [MENU]
+--  SELECT  A.Departamento,
+--        COUNT(A.IdPersona) [MENU]
+--  FROM cte_Personas A
+--  inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+--  inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+--  GROUP BY A.Departamento
+--  ORDER BY [MENU]
 
  select TOP 2000
     a.Nombre,
