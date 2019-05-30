@@ -1,3 +1,7 @@
+IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
+BEGIN
+    DROP TABLE #TempData
+END
 
 ;with cte_Data
 as
@@ -58,17 +62,17 @@ as
 		cross apply
         (
             select 
-                c.* 
+                c.[value] [Empresa]
             from 
                 string_split(a.Empresas,'|') c 
-                inner join EmpresaSapas d on c.[value] = d.EMPRESA 
         ) e
+        inner join EmpresaSapas d on e.Empresa = d.EMPRESA 
     where 
         a.IsWorking = 1
         and a.Estado = 1
         and a.SalarioInss >= 8500
         -- and a.Municipios = UPPER('bluefields')
-        and a.Departamento in ('LEON','CHINANDEGA')
+        and a.Departamento = ('MANAGUA')
         -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
@@ -94,13 +98,11 @@ as
 INTO
 	#TempData
 from
-    cte_Personas a
-    inner join cte_Tarjeta b on b.IdCliente = a.IdPersona
-    inner join cte_Telefonos c on c.IdPersona = a.IdPersona
+    cte_Personas A
+    inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+    inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
     
 select * from #TempData
-
-
 
 /*SE HACE UPDATE A LOS TELEFONOS PARA QUE NO SE VUELVAN A LLAMAR*/
 

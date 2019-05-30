@@ -1,87 +1,112 @@
 
-;with cte_Data
-as
-(
-    select 
-        b.IdPersona,
-        b.Telefono,
-        ROW_NUMBER() OVER (PARTITION BY b.IdPersona ORDER BY b.Telefono DESC) [Registros]
-    from 
-        TelefonosPerCampaign a 
-        inner join Telefonos b on a.IdTelefono = b.IdTelefono 
-    where 
-        a.IdCampaign = 'EFMAX' and a.Disponible = 1 and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' and b.Estado = 1 and a.Estado = 1
-),
-cte_PersonaDisponibles
-as
-(
-    select a.IdPersona from cte_Data a group by a.IdPersona
-),
-cte_Telefonos
-AS
-(
-    SELECT 
-        PVT.IdPersona,
-        PVT.[1] [Telefono],
-        PVT.[2] [Alt_Phone]
-    FROM 
-        cte_Data A 
-        PIVOT (MAX(A.Telefono) FOR A.Registros IN ([1],[2],[3])) PVT
-),
-cte_DataTarjeta (IdCliente,Registros,Banco)
-AS
-(
-	SELECT 
-        A.IdCliente,
-        ROW_NUMBER() OVER (PARTITION BY A.IdCliente ORDER BY A.IdBancos ASC) [Registros],
-        B.Banco 
-    FROM 
-        dbo.Tarjetas A 
-        INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
-    WHERE 
-        A.IdBancos BETWEEN 1 AND 7
-        AND A.IdBancos != 6
+    ;with cte_Data
+    as
+    (
+        select 
+            b.IdPersona,
+            b.Telefono,
+            ROW_NUMBER() OVER (PARTITION BY b.IdPersona ORDER BY b.Telefono DESC) [Registros]
+        from 
+            TelefonosPerCampaign a 
+            inner join Telefonos b on a.IdTelefono = b.IdTelefono 
+        where 
+            a.IdCampaign = 'EFMAX' 
+            and a.Disponible = 1 
+            and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' 
+            and b.Estado = 1 
+            and a.Estado = 1
+    ),
+    cte_NotCall
+    as
+    (
+        select 
+            a.IdPersona 
+        from 
+            Telefonos a 
+            inner join TelefonosPerCampaign b on a.IdTelefono = b.IdTelefono
+        where
+            b.Disponible = 0
+        group by a.IdPersona
+    ),
+    cte_PersonaDisponibles (IdPersona)
+    as
+    (
+        select 
+            a.IdPersona 
+        from 
+            cte_Data a 
+        group by a.IdPersona
+        except
+        select 
+            b.IdPersona 
+        from cte_NotCall b
+    ),
+    cte_Telefonos
+    AS
+    (
+        SELECT 
+            PVT.IdPersona,
+            PVT.[1] [Telefono],
+            PVT.[2] [Alt_Phone]
+        FROM 
+            cte_Data A 
+            PIVOT (MAX(A.Telefono) FOR A.Registros IN ([1],[2],[3])) PVT
+    ),
+    cte_DataTarjeta (IdCliente,Registros,Banco)
+    AS
+    (
+        SELECT 
+            A.IdCliente,
+            ROW_NUMBER() OVER (PARTITION BY A.IdCliente ORDER BY A.IdBancos ASC) [Registros],
+            B.Banco 
+        FROM 
+            dbo.Tarjetas A 
+            INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
+        WHERE 
+            A.IdBancos BETWEEN 1 AND 7
+            AND A.IdBancos != 6
 
-),
-cte_Tarjeta(IdCliente,Banco)
-AS
-(
-	SELECT pvt.IdCliente,[1] [Banco] FROM cte_DataTarjeta x PIVOT ( max(x.Banco) FOR x.Registros IN ([1]) ) pvt
-),cte_Personas
-as
-(
-    select 
-        a.* 
-    from   
-        Persona a 
-        inner join cte_PersonaDisponibles b on a.IdPersona = b.IdPersona
-		cross apply
-        (
-            select 
-                c.* 
-            from 
-                string_split(a.Empresas,'|') c 
-                inner join EmpresaSapas d on c.[value] = d.EMPRESA 
-        ) e
-    where 
-        a.IsWorking = 1
-        and a.Estado = 1
-        and a.SalarioInss >= 8500
-        -- and a.Municipios = UPPER('bluefields')
-        and a.Departamento in ('MATAGALPA','JINOTEGA')
-        -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
-)
+    ),
+    cte_Tarjeta(IdCliente,Banco)
+    AS
+    (
+        SELECT pvt.IdCliente,[1] [Banco] FROM cte_DataTarjeta x PIVOT ( max(x.Banco) FOR x.Registros IN ([1]) ) pvt
+    ),cte_Personas
+    as
+    (
+        select 
+            a.* 
+        from   
+            Persona a 
+            inner join cte_PersonaDisponibles b on a.IdPersona = b.IdPersona
+            -- cross apply
+            -- (
+            --     select 
+            --         c.* 
+            --     from 
+            --         string_split(a.Empresas,'|') c 
+            --         inner join EmpresaSapas d on c.[value] = d.EMPRESA 
+            -- ) e
+        where 
+            a.IsWorking = 1
+            and a.Estado = 1
+            -- and a.SalarioInss >= 8500
+            -- and a.Municipios = UPPER('bluefields')
+            and a.Departamento in ('MANAGUA','MASAYA','GRANADA')
+            and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','Aprobado Credex')
+    )
 
--- MENU
---  SELECT  A.Departamento,
---        COUNT(A.IdPersona) [MENU]
---  FROM cte_Personas A
---  inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
---  inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
---  GROUP BY A.Departamento
---  ORDER BY [MENU]
+    -- MENU
+    -- SELECT  A.Departamento,
+    --     COUNT(A.IdPersona) [MENU]
+    -- FROM cte_Personas A
+    -- inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+    -- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+    -- GROUP BY A.Departamento
+    -- ORDER BY [MENU]
 
- select TOP 2000
+ select 
+    -- TOP 2000
     a.Nombre,
     a.Cedula,
     a.Domicilio,

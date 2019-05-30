@@ -1,4 +1,4 @@
-if(object_id('#TempData') is not null)
+if(object_id('tempdb..#TempData') is not null)
 begin
     drop table #TempData
 end
@@ -69,8 +69,8 @@ as
         a.IsWorking = 1
         and a.Estado = 1
         and a.SalarioInss >= 15000
-        and a.Municipios = 'PUERTO CABEZAS'
-        -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
+        and a.Departamento IN ('MANAGUA')
+        and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
 -- MENU
