@@ -83,7 +83,7 @@ as
         and a.Estado = 1
         and a.SalarioInss >= 8500
         -- and a.Municipios = UPPER('bluefields')
-        and a.Departamento in ('LEON','CHINANDEGA')
+        and a.Departamento in ('MASAYA','GRANADA','CARAZO')
         -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 -- MENU
@@ -105,7 +105,6 @@ as
     END [Salario],
     a.Departamento,
     a.Municipios,
-    a.SalarioInss [Salario],
     c.Telefono,
     c.Alt_Phone,
     b.Banco

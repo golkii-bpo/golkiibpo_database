@@ -1,0 +1,4 @@
+DECLARE @IDP INT
+SELECT @IDP=IdPersona FROM Telefonos WHERE TELEFONO = '77981082'
+SELECT * FROM Persona WHERE IdPersona=@IDP
+SELECT * FROM Telefonos WHERE IdPersona = @IDP

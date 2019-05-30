@@ -69,7 +69,8 @@ as
         a.IsWorking = 1
         and a.Estado = 1
         and a.SalarioInss >= 15000
-        and a.Municipios = 'PUERTO CABEZAS'
+        -- and a.Municipios = 'MANA'
+        AND A.Departamento IN ('MASAYA','GRANADA','CARAZO')
         -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 
