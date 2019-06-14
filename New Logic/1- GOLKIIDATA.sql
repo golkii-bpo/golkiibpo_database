@@ -1,5 +1,8 @@
 /*CREACION DE BASES DE DATOS Y TABLAS*/
 
+-- USE BaseControl
+-- DROP DATABASE GOLKIIDATA
+-- GO
 CREATE DATABASE GOLKIIDATA
 GO
 USE GOLKIIDATA
@@ -41,8 +44,14 @@ CREATE FUNCTION ObtenerEdad
 RETURNS INT
 AS
 BEGIN
+    IF(@Cedula IS NULL OR @Cedula NOT LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][A-Z]')
+    BEGIN 
+        RETURN 0 
+    END
+    
     DECLARE @YEAR AS INT, @AYEAR AS INT, @IDATE AS DATE;
-    SET @YEAR = CAST(SUBSTRING(@Cedula,8,2) AS INT);SET @YEAR = CASE WHEN 0 <= @YEAR AND @YEAR <= SUBSTRING(CONVERT(VARCHAR,GETDATE(),112),3,2) THEN 2000+@YEAR ELSE 1900+@YEAR END;
+    SET @YEAR = CAST(SUBSTRING(@Cedula,8,2) AS INT);
+    SET @YEAR = CASE WHEN 0 <= @YEAR AND @YEAR <= SUBSTRING(CONVERT(VARCHAR,GETDATE(),112),3,2) THEN 2000+@YEAR ELSE 1900+@YEAR END;
     
     SET @IDATE = CAST(CONCAT(@YEAR,'-',SUBSTRING(@Cedula,6,2),'-',SUBSTRING(@Cedula,4,2)) AS DATE);
     RETURN CEILING(DATEDIFF(DAY,@IDATE,GETDATE())/365)
@@ -55,12 +64,12 @@ GO
 CREATE TABLE Persona
 (
     IdPersona int PRIMARY KEY IDENTITY(1,1),
-    IdProcedencia INT FOREIGN KEY REFERENCES Procedencia(IdProcedencia),
+    IdProcedencia INT FOREIGN KEY REFERENCES Procedencia(IdProcedencia) NULL,
     Nombre VARCHAR(100) NOT NULL,
     Cedula VARCHAR(14) CHECK(Cedula LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][A-z]'),
     Domicilio VARCHAR(MAX),
     Demografia AS SUBSTRING(Cedula,1,3),
-    Edad AS dbo.ObtenerEdad(Cedula),
+    Edad INT NULL,
     Sexo CHAR CHECK (Sexo IN('M','F',NULL)) DEFAULT NULL,
     Salario MONEY DEFAULT 0,
     Estado BIT DEFAULT 1,
@@ -258,9 +267,40 @@ BEGIN
     DECLARE @F AS DATE,@Lote AS INT;
     SET @Lote = ISNULL((SELECT MAX(Lote) FROM Telefonos),0);
     SET @F = GETDATE()
-    UPDATE A SET A.Lote = @Lote, A.FechaIngreso = @F FROM Telefonos A INNER JOIN inserted B ON A.Telefono = B.Telefono
+    UPDATE A SET A.Lote = @Lote, A.FechaModificacion = @F FROM Telefonos A INNER JOIN inserted B ON A.Telefono = B.Telefono
 END
 
 GO
 
-CREATE 
+/*Esta Logica se va a crear por cada una de las campañias Que se vayan a crear*/
+
+CREATE DATABASE EFNI
+
+GO
+
+USE EFNI
+
+GO
+
+CREATE TABLE Telefono 
+(
+    EFNI_Telefono INT PRIMARY KEY,
+    LastIdPersona INT,
+    FechaLlamada DATETIME,
+    CalledCount INT,
+    Reprocesada BIT,
+    FechaReprocesamiento DATE,
+    Lote INT
+)
+
+GO
+
+CREATE TABLE Persona 
+(
+    EFNI_Persona INT PRIMARY KEY,
+    UltimaLlamada DATETIME,
+    CCMensual INT,
+    CCGlobal INT,
+    CCReproceso INT,
+    Disponible BIT DEFAULT 0
+)
