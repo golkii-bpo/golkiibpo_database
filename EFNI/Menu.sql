@@ -1,4 +1,4 @@
-if(object_id('#TempData') is not null)
+if(object_id('tempdb.dbo.#TempData') is not null)
 begin
     drop table #TempData
 end
@@ -62,22 +62,25 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        and a.SalarioInss >= 15000
-        and a.Departamento in ('MANAGUA')
-        -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
+        and (a.SalarioInss >= 8400 OR A.Salario >= 8400)
+        and a.Departamento in ('CHINANDEGA')
+        and  a.StatusCredex is null
+        -- AND StatusCredex IN ('Linea Autorizada','En Proceso','Aprobado Credex')
 )
-
 -- MENU
--- SELECT  A.Departamento,
---        COUNT(A.IdPersona) [MENU]
+-- SELECT  
+--     A.Departamento,
+--     -- --A.Municipios,
+--     COUNT(A.IdPersona) [MENU]
 -- FROM cte_Personas A
--- inner join cte_Tarjeta      B on B.IdCliente = A.IdPersona
+-- INNER join cte_Tarjeta  B on B.IdCliente = A.IdPersona
 -- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
 -- GROUP BY A.Departamento
+-- -- --GROUP BY A.Municipios
 -- ORDER BY [MENU]
 
 -- Carga de base
-select TOP 100
+select 
     a.Nombre,
     a.Cedula,
     a.Domicilio,
@@ -91,7 +94,7 @@ INTO
 	#TempData
 from
     cte_Personas a
-    left join cte_Tarjeta b on b.IdCliente = a.IdPersona
+    INNER join cte_Tarjeta b on b.IdCliente = a.IdPersona
     inner join cte_Telefonos c on c.IdPersona = a.IdPersona
     
 select * from #TempData
