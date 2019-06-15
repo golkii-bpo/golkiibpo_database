@@ -197,9 +197,9 @@ GO
 
 CREATE TABLE Credex
 (
-    IdCredex INT PRIMARY KEY,
-    IdPersona INT FOREIGN KEY REFERENCES Persona(IdPersona),
-    IdStatus INT FOREIGN KEY REFERENCES StatusCredex(IdStatus),
+    IdCredex INT PRIMARY KEY IDENTITY (1,1),
+    IdPersona INT FOREIGN KEY REFERENCES Persona (IdPersona),
+    IdStatus INT FOREIGN KEY REFERENCES StatusCredex (IdStatus),
     Credito MONEY,
     Disponible BIT DEFAULT 1,
     Lote INT,
