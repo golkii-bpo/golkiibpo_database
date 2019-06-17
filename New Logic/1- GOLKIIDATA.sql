@@ -296,11 +296,12 @@ GO
 CREATE TABLE Telefono 
 (
     EFNI_Telefono INT PRIMARY KEY,
-    LastIdPersona INT,
+    LastIdPersona INT NULL,
+    Tipificacion VARCHAR(20),
     FechaLlamada DATETIME,
     CalledCount INT,
-    Reprocesada BIT,
-    FechaReprocesamiento DATE,
+    Reprocesada BIT DEFAULT 0,
+    FechaReprocesamiento DATE DEFAULT GETDATE(),
     Lote INT
 )
 
@@ -310,8 +311,8 @@ CREATE TABLE Persona
 (
     EFNI_Persona INT PRIMARY KEY,
     UltimaLlamada DATETIME,
-    CCMensual INT,
-    CCGlobal INT,
-    CCReproceso INT,
+    CCMensual INT DEFAULT 0,
+    CCGlobal INT DEFAULT 0,
+    CCReproceso INT DEFAULT 0,
     Disponible BIT DEFAULT 0
 )
