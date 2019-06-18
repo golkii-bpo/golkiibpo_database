@@ -314,5 +314,7 @@ CREATE TABLE Persona
     CCMensual INT DEFAULT 0,
     CCGlobal INT DEFAULT 0,
     CCReproceso INT DEFAULT 0,
-    Disponible BIT DEFAULT 0
+    Disponible BIT DEFAULT 0,
+    Lote INT DEFAULT 0,
+    FechaReprocesamiento DATE
 )

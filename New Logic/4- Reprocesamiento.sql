@@ -96,62 +96,64 @@ BEGIN
     WHERE
             B.EFNI_Telefono IS NULL
 
-        -- SE MOFICAN LAS PERSONAS QUE YA SE TIENE REGISTRO
-        ;WITH
-        cte_Data
-        AS
-        (
-            SELECT B.IdPersonas [EFNI_Persona], SUM(A.CalledCount)[CC], MAX(A.FechaLlamada)[UL]
-            FROM
-                EFNI.dbo.Telefono A
-                INNER JOIN GOLKIIDATA.dbo.Telefonos B ON A.EFNI_Telefono = B.Telefono
-                INNER JOIN EFNI.dbo.Persona C ON C.EFNI_Persona = B.IdPersonas
-            WHERE 
-                A.Lote = @Lote
-            GROUP BY
-                B.IdPersonas
-        )
-        UPDATE B SET B.CCGlobal += A.CC,B.UltimaLlamada = A.UL,B.Disponible = 0 FROM cte_Data A INNER JOIN EFNI.dbo.Persona B ON A.EFNI_Persona = B.EFNI_Persona
+    -- SE MOFICAN LAS PERSONAS QUE YA SE TIENE REGISTRO
+    ;WITH
+    cte_Data
+    AS
+    (
+        SELECT B.IdPersonas [EFNI_Persona], SUM(A.CalledCount)[CC], MAX(A.FechaLlamada)[UL]
+        FROM
+            EFNI.dbo.Telefono A
+            INNER JOIN GOLKIIDATA.dbo.Telefonos B ON A.EFNI_Telefono = B.Telefono
+            INNER JOIN EFNI.dbo.Persona C ON C.EFNI_Persona = B.IdPersonas
+        WHERE 
+            A.Lote = @Lote
+        GROUP BY
+            B.IdPersonas
+    )
+    UPDATE B SET B.CCGlobal += A.CC,B.UltimaLlamada = A.UL,B.Disponible = 0 FROM cte_Data A INNER JOIN EFNI.dbo.Persona B ON A.EFNI_Persona = B.EFNI_Persona
 
-        -- SE AGREGAN LAS PERSONAS QUE NO POSEEN UN REGISTRO
-        ;WITH
-        cte_Data
-        AS
-        (
-            SELECT B.IdPersonas [EFNI_Persona], SUM(A.CalledCount)[CC], MAX(A.FechaLlamada)[UL]
-            FROM
-                EFNI.dbo.Telefono A
-                INNER JOIN GOLKIIDATA.dbo.Telefonos B ON A.EFNI_Telefono = B.Telefono
-                LEFT JOIN EFNI.dbo.Persona C ON C.EFNI_Persona = B.IdPersonas
-            WHERE
-                A.Lote = @Lote AND
-                C.EFNI_Persona IS NULL
-            GROUP BY
-                B.IdPersonas
-        )
+    -- SE AGREGAN LAS PERSONAS QUE NO POSEEN UN REGISTRO
+    ;WITH
+    cte_Data
+    AS
+    (
+        SELECT B.IdPersonas [EFNI_Persona], SUM(A.CalledCount)[CC], MAX(A.FechaLlamada)[UL]
+        FROM
+            EFNI.dbo.Telefono A
+            INNER JOIN GOLKIIDATA.dbo.Telefonos B ON A.EFNI_Telefono = B.Telefono
+            LEFT JOIN EFNI.dbo.Persona C ON C.EFNI_Persona = B.IdPersonas
+        WHERE
+            A.Lote = @Lote AND
+            C.EFNI_Persona IS NULL
+        GROUP BY
+            B.IdPersonas
+    )
     INSERT INTO EFNI.dbo.Persona
         (EFNI_Persona,CCGlobal,CCMensual,UltimaLlamada,Disponible)
     SELECT A.EFNI_Persona, A.CC, A.CC, A.UL, 0
     FROM cte_Data A
 
-        --SE ACTUALIZAN LOS CALLCOUNTS MENSUALES
-        ;WITH
-        cte_Data
-        AS
-        (
-            SELECT
-                B.EFNI_Persona,
-                COUNT(1)[CCM]
-            FROM
-                EFNI.dbo.Telefono A
-                INNER JOIN EFNI.dbo.Persona B ON A.LastIdPersona = B.EFNI_Persona
-            WHERE
-                A.Lote = @Lote
-            GROUP BY
-                B.EFNI_Persona
-        )
+    --SE ACTUALIZAN LOS CALLCOUNTS MENSUALES
+    ;WITH
+    cte_Data
+    AS
+    (
+        SELECT
+            B.EFNI_Persona,
+            COUNT(1)[CCM]
+        FROM
+            EFNI.dbo.Telefono A
+            INNER JOIN EFNI.dbo.Persona B ON A.LastIdPersona = B.EFNI_Persona
+        WHERE
+            A.Lote = @Lote
+        GROUP BY
+            B.EFNI_Persona
+    )
 
-        UPDATE B SET B.CCMensual += A.CCM FROM cte_Data A INNER JOIN EFNI.dbo.Persona B ON A.EFNI_Persona = B.EFNI_Persona
+    UPDATE B SET B.CCMensual += A.CCM FROM cte_Data A INNER JOIN EFNI.dbo.Persona B ON A.EFNI_Persona = B.EFNI_Persona
+    COMMIT TRANSACTION
+
     END TRY
     BEGIN CATCH
         ROLLBACK TRANSACTION
@@ -168,3 +170,5 @@ END
 /*
     Logica de Reprocesamiento
 */
+
+SELECT * FROM Persona A
