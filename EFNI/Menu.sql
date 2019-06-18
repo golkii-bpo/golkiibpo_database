@@ -15,11 +15,13 @@ as
         inner join Telefonos b on a.IdTelefono = b.IdTelefono 
     where 
         a.IdCampaign = 'EFNI' and a.Disponible = 1 and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' and b.Estado = 1 and a.Estado = 1
+        AND B.Operadora = 'CLARO'
 ),
 cte_PersonaDisponibles
 as
 (
     select a.IdPersona from cte_Data a group by a.IdPersona
+    
 ),
 cte_Telefonos
 AS
@@ -62,8 +64,8 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        and (a.SalarioInss >= 8400 OR A.Salario >= 8400)
-        and a.Departamento in ('CHINANDEGA')
+        and (a.SalarioInss >= 15000 OR A.Salario >= 15000)
+        and a.Departamento in ('MANAGUA')
         and  a.StatusCredex is null
         -- AND StatusCredex IN ('Linea Autorizada','En Proceso','Aprobado Credex')
 )
@@ -80,7 +82,7 @@ as
 -- ORDER BY [MENU]
 
 -- Carga de base
-select 
+select TOP 2000
     a.Nombre,
     a.Cedula,
     a.Domicilio,
