@@ -282,39 +282,3 @@ BEGIN
 END
 
 GO
-
-/*Esta Logica se va a crear por cada una de las campañias Que se vayan a crear*/
-
-CREATE DATABASE EFNI
-
-GO
-
-USE EFNI
-
-GO
-
-CREATE TABLE Telefono 
-(
-    EFNI_Telefono INT PRIMARY KEY,
-    LastIdPersona INT NULL,
-    Tipificacion VARCHAR(20),
-    FechaLlamada DATETIME,
-    CalledCount INT,
-    Reprocesada BIT DEFAULT 0,
-    FechaReprocesamiento DATE DEFAULT GETDATE(),
-    Lote INT
-)
-
-GO
-
-CREATE TABLE Persona 
-(
-    EFNI_Persona INT PRIMARY KEY,
-    UltimaLlamada DATETIME,
-    CCMensual INT DEFAULT 0,
-    CCGlobal INT DEFAULT 0,
-    CCReproceso INT DEFAULT 0,
-    Disponible BIT DEFAULT 0,
-    Lote INT DEFAULT 0,
-    FechaReprocesamiento DATE
-)

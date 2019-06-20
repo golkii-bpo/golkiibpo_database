@@ -27,7 +27,6 @@ end;
 
 create procedure CleanTempData()
 begin
-	truncate table EFNI.Telefono;
+	truncate table EFNI.Telefonos;
 end;
 
-CALL EFNI.LoadTempData ('2019-06-17 13:21:32');
