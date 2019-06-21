@@ -64,7 +64,7 @@ BEGIN
     BEGIN
         SET @IDATE = CAST(@DS AS DATE);
     END
-    RETURN CEILING(DATEDIFF(DAY,@IDATE,GETDATE())/365)
+    RETURN FLOOR(DATEDIFF(DAY,@IDATE,GETDATE())/365)
 END
 
 GO
@@ -175,9 +175,12 @@ ON Tarjetas
 AFTER UPDATE 
 AS
 BEGIN
-    DECLARE @Lote AS INT, @F AS DATE 
-    SET @Lote = ISNULL((SELECT MAX(A.Lote) FROM Tarjetas A),0) + 1 ; SET @F = GETDATE();
-    UPDATE A SET A.Lote = @Lote,A.FechaModificacion = @F FROM Tarjetas A INNER JOIN inserted B ON A.IdBanco = B.IdBanco AND A.IdPersona = B.IdPersona
+	IF(SESSION_CONTEXT('TRI_U_Tarjetas')IS NULL)
+	BEGIN
+		DECLARE @Lote AS INT, @F AS DATE 
+		SET @Lote = ISNULL((SELECT MAX(A.Lote) FROM Tarjetas A),0) + 1 ; SET @F = GETDATE();
+		UPDATE A SET A.Lote = @Lote,A.FechaModificacion = @F FROM Tarjetas A INNER JOIN inserted B ON A.IdBanco = B.IdBanco AND A.IdPersona = B.IdPersona
+	END ELSE BEGIN EXEC sp_set_session_context 'TRI_U_Tarjetas', NULL END
 END
 
 GO
@@ -227,10 +230,13 @@ ON Credex
 AFTER UPDATE
 AS
 BEGIN
-    DECLARE @Lote AS INT, @F AS DATE 
-    SET @Lote = ISNULL((SELECT MAX(Lote) FROM Credex),0) + 1;
-    SET @F = GETDATE()
-    UPDATE A SET A.Lote = @Lote,A.FechaModificacion = @F FROM Credex A INNER JOIN inserted B ON A.IdCredex = B.IdCredex
+	IF(SESSION_CONTEXT('TRI_U_Credex')IS NULL)
+	BEGIN
+		DECLARE @Lote AS INT, @F AS DATE 
+		SET @Lote = ISNULL((SELECT MAX(Lote) FROM Credex),0) + 1;
+		SET @F = GETDATE()
+		UPDATE A SET A.Lote = @Lote,A.FechaModificacion = @F FROM Credex A INNER JOIN inserted B ON A.IdCredex = B.IdCredex
+	END ELSE BEGIN EXEC sp_set_session_context 'TRI_U_Credex', NULL END
 END
 
 GO
@@ -262,10 +268,8 @@ ON Telefonos
 AFTER INSERT
 AS
 BEGIN
-    DECLARE @F AS DATE,@Lote AS INT;
-    SET @Lote = ISNULL((SELECT MAX(Lote) FROM Telefonos),0);
-    SET @F = GETDATE()
-    UPDATE A SET A.Lote = @Lote, A.FechaIngreso = @F FROM Telefonos A INNER JOIN inserted B ON A.Telefono = B.Telefono
+	DECLARE @F AS DATE,@Lote AS INT; SET @Lote = ISNULL((SELECT MAX(Lote) FROM Telefonos),0); SET @F = GETDATE()
+	UPDATE A SET A.Lote = @Lote, A.FechaIngreso = @F FROM Telefonos A INNER JOIN inserted B ON A.Telefono = B.Telefono
 END
 
 GO
@@ -275,10 +279,12 @@ ON Telefonos
 AFTER UPDATE
 AS
 BEGIN
-    DECLARE @F AS DATE,@Lote AS INT;
-    SET @Lote = ISNULL((SELECT MAX(Lote) FROM Telefonos),0);
-    SET @F = GETDATE()
-    UPDATE A SET A.Lote = @Lote, A.FechaModificacion = @F FROM Telefonos A INNER JOIN inserted B ON A.Telefono = B.Telefono
+	IF(SESSION_CONTEXT('TRI_U_Telefono')IS NULL)
+	BEGIN
+		EXEC sp_set_session_context 'TRI_U_Telefono', 1;
+		DECLARE @F AS DATE,@Lote AS INT;SET @Lote = ISNULL((SELECT MAX(Lote) FROM Telefonos),0); SET @F = GETDATE()
+		UPDATE A SET A.Lote = @Lote, A.FechaModificacion = @F FROM Telefonos A INNER JOIN inserted B ON A.Telefono = B.Telefono
+	END ELSE BEGIN EXEC sp_set_session_context 'TRI_U_Telefono', NULL END
 END
 
 GO
