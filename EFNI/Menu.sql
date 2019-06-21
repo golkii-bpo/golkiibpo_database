@@ -64,25 +64,25 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        and (a.SalarioInss >= 15000 OR A.Salario >= 15000)
-        and a.Departamento in ('MANAGUA')
-        and  a.StatusCredex is null
-        -- AND StatusCredex IN ('Linea Autorizada','En Proceso','Aprobado Credex')
+        -- and (a.SalarioInss >= 9000 OR A.Salario >= 9000)
+        -- and a.Departamento in ('CHINANDEGA')
+        -- and  a.StatusCredex is null
+        AND StatusCredex IN ('Linea Autorizada','Aprobado Credex')
 )
 -- MENU
--- SELECT  
---     A.Departamento,
---     -- --A.Municipios,
---     COUNT(A.IdPersona) [MENU]
--- FROM cte_Personas A
--- INNER join cte_Tarjeta  B on B.IdCliente = A.IdPersona
--- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
--- GROUP BY A.Departamento
--- -- --GROUP BY A.Municipios
--- ORDER BY [MENU]
+SELECT  
+    A.Departamento,
+    -- --A.Municipios,
+    COUNT(A.IdPersona) [MENU]
+FROM cte_Personas A
+INNER join cte_Tarjeta  B on B.IdCliente = A.IdPersona
+inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+GROUP BY A.Departamento
+-- --GROUP BY A.Municipios
+ORDER BY [MENU]
 
 -- Carga de base
-select TOP 2000
+select TOP 200
     a.Nombre,
     a.Cedula,
     a.Domicilio,

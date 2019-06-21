@@ -54,7 +54,7 @@ AS
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
-        (A.IdBancos BETWEEN 1 AND 5
+        (A.IdBancos BETWEEN 1 AND 7
         AND A.IdBancos != 6
         )
 ),
@@ -65,7 +65,7 @@ AS
 ),cte_Personas
 as
 (
-    select 
+    select DISTINCT
         a.* 
     from   
         Persona a 
@@ -81,12 +81,12 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        and a.SalarioInss >= 8500
+        and a.SalarioInss >= 15000
         -- and a.Municipios = UPPER('bluefields')
-        and a.Departamento in ('MASAYA','GRANADA','CARAZO')
+        and a.Departamento in ('MANAGUA')
         -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
--- MENU
+-- -- MENU
 --  SELECT  A.Departamento,
 --        COUNT(A.IdPersona) [MENU]
 --  FROM cte_Personas A

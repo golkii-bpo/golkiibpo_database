@@ -1,4 +1,4 @@
-if(object_id('#TempData') is not null)
+if(object_id('tempdb.dbo.#TempData') is not null)
 begin
     drop table #TempData
 end
@@ -68,10 +68,11 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        and a.SalarioInss >= 15000
-        -- and a.Municipios = 'MANA'
-        AND A.Departamento IN ('MASAYA','GRANADA','CARAZO')
-        -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
+        -- and a.SalarioInss >= 15000
+        and a.Departamento = 'chinandega'
+        -- AND A.Departamento IN ('MASAYA','GRANADA','CARAZO')
+        -- 'Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex'
+        and A.StatusCredex IN ('Linea Autorizada','Aprobado Credex')
 )
 
 -- MENU
@@ -85,7 +86,7 @@ as
 -- ORDER BY [MENU] DESC
 
 -- Carga de base
-select TOP 1500
+select TOP 200
     a.Nombre,
     a.Cedula,
     a.Domicilio,

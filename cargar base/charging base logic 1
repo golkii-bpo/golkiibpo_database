@@ -1,0 +1,122 @@
+SELECT * FROM BasesRecibidas.dbo.DB_18062019
+
+/*
+	SE VALIDA QUE EL PRODUCTO EXISTA
+*/
+;WITH cte_Data
+AS
+(
+	SELECT ROW_NUMBER() OVER (PARTITION BY A.cedula ORDER BY A.cedula) [Registros],A.* FROM BasesRecibidas.dbo.DB_18062019 A
+)
+SELECT * FROM cte_Data A 
+--SELECT * FROM cte_Data A WHERE A.Registros != 1
+
+/*
+	SE PROCEDE A LLENAR LA PARTE DE LA PERSONA
+*/
+;WITH cte_Data
+AS
+(
+	SELECT A.cedula FROM BasesRecibidas.dbo.DB_18062019 A
+	EXCEPT
+	SELECT A.Cedula FROM dbo.Persona A
+)
+INSERT INTO Persona(IdProcedencia,Nombre,Cedula,Sexo,Salario,Departamento,Municipios)
+SELECT 
+	1,A.nombre,A.cedula,CASE A.sexo WHEN 'MASCULINO' THEN 1 ELSE 0 END,A.salario,A.departamento,A.municipio 
+FROM 
+BasesRecibidas.dbo.DB_18062019 A
+INNER JOIN cte_Data B ON B.cedula = A.cedula
+
+GO
+
+/*
+	SE PROCEDE CON LA ACTUALIZACION DE LOS NUMEROS DE TELEFONOS
+*/
+WITH cte_CedulaTelefonos
+AS
+(
+	SELECT 
+		B.IdPersona,CAST(B.Telefonos AS INT) Telefonos
+	FROM 
+		(
+			SELECT 
+				B.IdPersona,
+				CAST(STR(a.telefono,8,1) AS NVARCHAR(MAX)) [telefono],
+				CAST(A.telefono1 AS NVARCHAR(MAX)) [telefono1],
+				CAST(A.telefono2 AS NVARCHAR(MAX))[telefono2] 
+			FROM 
+				BasesRecibidas.dbo.DB_18062019 A
+				INNER JOIN dbo.Persona B ON B.Cedula = A.cedula
+			WHERE
+				A.cedula LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][A-z]'
+		) A
+		UNPIVOT (
+			Telefonos FOR COLUM IN (A.telefono,A.telefono1,A.telefono2)
+		) B
+	WHERE 
+		B.Telefonos LIKE '[2,5,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+),cte_NoIncluir(Telefonos)
+AS
+(
+	SELECT A.Telefonos FROM cte_CedulaTelefonos A
+	EXCEPT
+	SELECT B.Telefono FROM dbo.Telefonos B 
+),cte_Data
+AS
+(
+	SELECT A.* FROM cte_CedulaTelefonos A INNER JOIN cte_NoIncluir B ON B.Telefonos = A.Telefonos
+)
+INSERT INTO Telefonos(IdPersona,Telefono,FechaIngreso,Estado,IdProcedencia,FechaModificacion)
+SELECT 
+	A.IdPersona,a.Telefonos,GETDATE(),1,1,GETDATE()
+FROM cte_Data A
+
+GO
+
+--SELECT a.banco FROM BasesRecibidas.dbo.DB_18062019 A GROUP BY A.banco
+INSERT INTO Tarjetas(IdCliente,IdBancos,Estado,IdProcedencia)
+SELECT
+	A.IdPersona,
+	A.IdBanco,
+	1,
+	1
+FROM 
+(
+	SELECT
+		B.IdPersona,
+		CASE A.banco 
+			WHEN 'Banco Ficohsa Nicaragua, S.A' THEN 3
+			WHEN 'BANPRO' THEN 5
+			WHEN 'BANCO DE AMERICA CENTRAL' THEN 1
+			WHEN 'Banco Lafise Bancentro' THEN 4
+			WHEN 'BANCENTRO' THEN 4
+			WHEN 'BANCO DE LA PRODUCCION S' THEN 5
+			WHEN 'BANCO DE FINANZAS' THEN 2
+			WHEN 'BDF' THEN 2
+			WHEN 'BAC' THEN 1
+			WHEN 'FICOHSA' THEN 3
+			ELSE 7
+		END [IdBanco]
+	FROM 
+		BasesRecibidas.dbo.DB_18062019 A
+		INNER JOIN dbo.Persona B ON B.Cedula = A.cedula
+	EXCEPT
+	SELECT A.IdCliente,A.IdBancos FROM dbo.Tarjetas A
+) A
+
+/*
+	SE ACTUALIZA EL INSS 
+*/
+
+UPDATE A SET A.IsWorking = 0, A.SalarioInss = NULL,A.Empresas = NULL FROM dbo.Persona A 
+
+GO
+
+;WITH cte_Data
+AS
+(
+	SELECT A.CEDULA COLLATE Modern_Spanish_CI_AS [Cedula],SUM(A.SALARIO) [Salario],INSS.Empresas(A.CEDULA) [Empresas] FROM REFCOMERCIAL.dbo.infoINSS A WHERE A.disponible = 1 GROUP BY A.CEDULA
+)
+
+UPDATE B SET B.IsWorking = 1,B.SalarioInss = A.Salario,B.Empresas = A.Empresas FROM cte_Data A INNER JOIN dbo.Persona B ON B.Cedula = A.Cedula
