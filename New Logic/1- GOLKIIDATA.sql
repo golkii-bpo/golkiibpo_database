@@ -175,7 +175,7 @@ ON Tarjetas
 AFTER UPDATE 
 AS
 BEGIN
-	IF(SESSION_CONTEXT('TRI_U_Tarjetas')IS NULL)
+	IF(SESSION_CONTEXT(N'TRI_U_Tarjetas')IS NULL)
 	BEGIN
 		DECLARE @Lote AS INT, @F AS DATE 
 		SET @Lote = ISNULL((SELECT MAX(A.Lote) FROM Tarjetas A),0) + 1 ; SET @F = GETDATE();
@@ -230,8 +230,9 @@ ON Credex
 AFTER UPDATE
 AS
 BEGIN
-	IF(SESSION_CONTEXT('TRI_U_Credex')IS NULL)
+	IF(SESSION_CONTEXT(N'TRI_U_Credex') IS NULL)
 	BEGIN
+		EXEC sp_set_session_context 'TRI_U_Credex', 1
 		DECLARE @Lote AS INT, @F AS DATE 
 		SET @Lote = ISNULL((SELECT MAX(Lote) FROM Credex),0) + 1;
 		SET @F = GETDATE()
@@ -279,7 +280,7 @@ ON Telefonos
 AFTER UPDATE
 AS
 BEGIN
-	IF(SESSION_CONTEXT('TRI_U_Telefono')IS NULL)
+	IF(SESSION_CONTEXT(N'TRI_U_Telefono') IS NULL)
 	BEGIN
 		EXEC sp_set_session_context 'TRI_U_Telefono', 1;
 		DECLARE @F AS DATE,@Lote AS INT;SET @Lote = ISNULL((SELECT MAX(Lote) FROM Telefonos),0); SET @F = GETDATE()
