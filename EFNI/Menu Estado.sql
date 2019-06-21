@@ -1,3 +1,7 @@
+IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
+BEGIN
+    DROP TABLE #TempData
+END
 
 IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
 BEGIN
@@ -73,11 +77,11 @@ as
 		cross apply
         (
             select 
-                c.* 
+                c.[value] [Empresa]
             from 
                 string_split(a.Empresas,'|') c 
-                inner join EmpresaSapas d on c.[value] = d.EMPRESA 
         ) e
+        inner join EmpresaSapas d on e.Empresa = d.EMPRESA 
     where 
         a.IsWorking = 1
         and a.Estado = 1
@@ -116,8 +120,6 @@ from
     inner join cte_Telefonos c on c.IdPersona = a.IdPersona
     
 select * from #TempData
-
-
 
 /*SE HACE UPDATE A LOS TELEFONOS PARA QUE NO SE VUELVAN A LLAMAR*/
 

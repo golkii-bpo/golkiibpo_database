@@ -45,7 +45,8 @@ AS
         dbo.Tarjetas A 
         INNER JOIN dbo.Bancos B ON B.IdBancos = A.IdBancos 
     WHERE 
-        A.IdBancos BETWEEN 1 AND 5
+        A.IdBancos BETWEEN 1 AND 7
+        AND A.IdBancos != 6
 
 ),
 cte_Tarjeta(IdCliente,Banco)
