@@ -511,7 +511,6 @@ GO
 CREATE PROCEDURE ReprocesoTelefonos
 AS
 BEGIN
-
 	DECLARE @F AS DATE SET @F = GETDATE();
 
 	IF(OBJECT_ID('tempdb..#TempReprocesamiento') IS NOT NULL)
@@ -527,9 +526,9 @@ BEGIN
 		A.Fuente [Fuente],
 		0 [Procesado] 
 	INTO 
-		#TempReprocesamiento 
+		#TempReprocesamiento
 	FROM 
-		EFNI.dbo.CampaingStatuses A
+		EFNI.dbo.PoliticaReprocesamiento A
 
 	DECLARE 
 		@IdTipificacion AS VARCHAR(6),
@@ -538,19 +537,21 @@ BEGIN
 		@CCMensual AS INT,
 		@Fuente AS VARCHAR(20)
 
-	WHILE((SELECT TOP 1 1 FROM #TempReprocesamiento A WHERE A.Procesado = 1) = 1)
+
+	WHILE((SELECT TOP 1 COUNT(1) FROM #TempReprocesamiento A WHERE A.Procesado = 0) != 0)
 	BEGIN
 		-- SE INICIALIZAN TODAS LAS VARIABLES
 		SELECT TOP 1 
 			@IdTipificacion = A.IdTipificacion,
 			@DayWithOutCall = A.DaysWithOutCall,
 			@CCGlobal = A.CCGlobal,
-			@CCMensual = A.CCMensual
+			@CCMensual = A.CCMensual,
+			@Fuente = A.Fuente
 		FROM 
 			#TempReprocesamiento A
 		WHERE
 			A.Procesado = 0
-			
+
 		UPDATE 
 			A 
 		SET 
@@ -568,7 +569,6 @@ BEGIN
 		-- SE SETEA QUE YA SE PROCESO. TIPO LA FUNCION DE CURSOR
 		UPDATE A SET A.Procesado = 1 FROM #TempReprocesamiento A WHERE A.IdTipificacion = @IdTipificacion AND A.Fuente = @Fuente
 	END
-
 END;
 
 GO
@@ -584,7 +584,7 @@ AS
 BEGIN
 	
 	DECLARE @Lote AS INT 
-	SELECT @Lote = ISNULL(MAX(A.Lote),0) FROM EFNI.dbo.Persona A 
+	SET @Lote = ISNULL((SELECT MAX(A.Lote) FROM EFNI.dbo.Persona A),0)
 	SET @Lote += 1;
 
 	UPDATE A
@@ -599,8 +599,8 @@ BEGIN
 			SELECT B.EFNI_Telefono FROM EFNI.dbo.Telefono B WHERE B.LastIdPersona = A.EFNI_Persona AND A.Disponible = 0 AND B.EFNI_Telefono IS NOT NULL
 		) C
 	WHERE 
-		A.Disponible = 0
-		AND C.EFNI_Telefono IS NULL
+		C.EFNI_Telefono IS NULL
+		AND A.Disponible = 0
 END
 
 GO
@@ -623,6 +623,6 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		ROLLBACK TRANSACTION
-		INSERT INTO LogReproceso ([Procedure],[Message],[Severity],[State],[Fecha]) VALUES (ERROR_PROCEDURE(),ERROR_MESSAGE(),ERROR_SEVERITY(),ERROR_STATE());
+		INSERT INTO LogReproceso ([Procedure],[Message],[Severity],[State],[Fecha]) VALUES (ERROR_PROCEDURE(),ERROR_MESSAGE(),ERROR_SEVERITY(),ERROR_STATE(),GETDATE());
 	END CATCH
 END
