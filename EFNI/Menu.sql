@@ -15,7 +15,6 @@ as
         inner join Telefonos b on a.IdTelefono = b.IdTelefono 
     where 
         a.IdCampaign = 'EFNI' and a.Disponible = 1 and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' and b.Estado = 1 and a.Estado = 1
-        AND B.Operadora = 'CLARO'
 ),
 cte_PersonaDisponibles
 as
@@ -65,25 +64,32 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        -- and (a.SalarioInss >= 9000 OR A.Salario >= 9000)
-        -- and a.Departamento in ('CHINANDEGA')
+        and (a.SalarioInss >= 15000 OR A.Salario >= 15000)
+        and (
+                a.Departamento in ('LEON','CHINANDEGA')
+                OR
+                A.Municipios IN ('BLUEFIELDS')
+        )
         -- and  a.StatusCredex is null
-        AND StatusCredex IN ('Linea Autorizada','Aprobado Credex')
+        -- AND StatusCredex IN ('Linea Autorizada','Aprobado Credex','Linea Suspendida','Cancelado','En Proceso')
+        -- Suspendida   -> Por mora menor a 60 dias
+        -- Cancelado    -> Inicio tramite de apertura de cuenta pero no termino
+        -- En proceso   -> Cuenta en tramite de apertura
 )
 -- MENU
-SELECT  
-    A.Departamento,
-    -- --A.Municipios,
-    COUNT(A.IdPersona) [MENU]
-FROM cte_Personas A
-INNER join cte_Tarjeta  B on B.IdCliente = A.IdPersona
-inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
-GROUP BY A.Departamento
--- --GROUP BY A.Municipios
-ORDER BY [MENU]
+-- SELECT  
+--     -- A.Departamento,
+--     A.Municipios,
+--     COUNT(A.IdPersona) [MENU]
+-- FROM cte_Personas A
+-- INNER join cte_Tarjeta  B on B.IdCliente = A.IdPersona
+-- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
+-- GROUP BY A.Municipios
+-- -- --GROUP BY A.Municipios
+-- ORDER BY [MENU]
 
 -- Carga de base
-select TOP 200
+select 
     a.Nombre,
     a.Cedula,
     a.Domicilio,

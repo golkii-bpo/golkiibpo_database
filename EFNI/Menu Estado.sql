@@ -1,12 +1,7 @@
-IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
-BEGIN
-    DROP TABLE #TempData
-END
-
-IF(OBJECT_ID('tempdb..#TempData') IS NOT NULL)
-BEGIN
-	DROP TABLE #TempData
-END
+if(object_id('tempdb.dbo.#TempData') is not null)
+begin
+    drop table #TempData
+end
 --- FROM HERE
 
 -- ESTE CTE ENUMERA CADA UNO DE LOS TELEFONOS QUE POSEE UNA PERSONA SIEMPRE Y CUANDO ESTOS 
@@ -87,7 +82,7 @@ as
         and a.Estado = 1
         and a.SalarioInss >= 15000
         -- and a.Municipios = UPPER('bluefields')
-        and a.Departamento in ('MANAGUA')
+        -- and a.Departamento in ('MANAGUA')
         -- and A.StatusCredex IN ('Linea Autorizada','Linea Inactiva','En Proceso','Aprobado Credex')
 )
 -- -- MENU
@@ -99,7 +94,7 @@ as
 --  GROUP BY A.Departamento
 --  ORDER BY [MENU]
 
- select TOP 2000
+ select 
     a.Nombre,
     a.Cedula,
     a.Domicilio,
@@ -140,3 +135,5 @@ INSERT INTO dbo.RegistroLlamadas (IdPersona,IdCampania,Telefono,Alt_Phone)
 SELECT B.IdPersona,1,A.Telefono,A.Alt_Phone FROM #TempData A INNER JOIN dbo.Persona B ON B.Cedula = A.Cedula
 
 DROP TABLE #TempData
+
+
