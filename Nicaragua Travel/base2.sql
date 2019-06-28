@@ -34,29 +34,74 @@ INTO #TEMP_TELEFONOS
 FROM CTE_TELEFONOS 
 ORDER BY CEDULA
 
+
 DELETE FROM #TEMP_TELEFONOS WHERE TEL NOT LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+
+
+SELECT 
+    A.*,
+    ROW_NUMBER() OVER(PARTITION BY TEL ORDER BY TEL) AS N
+INTO #REPEATED
+FROM #TEMP_TELEFONOS A
+DELETE FROM #REPEATED WHERE N = 1
+
+SELECT A.*
+INTO #UNREPEATED
+FROM #TEMP_TELEFONOS A
+LEFT JOIN #REPEATED B ON A.TEL = B.TEL
+WHERE B.TEL IS NULL
+
 
 SELECT 
 DISTINCT NOMBRE,CEDULA 
 INTO #TEMP_PERSONA
-FROM #TEMP_TELEFONOS;
+FROM #UNREPEATED
 
-WITH
-CTE_PERSONA_SIN_CEDULA
-AS (
-    SELECT * FROM #TEMP_TELEFONOS WHERE CEDULA IS NULL
-)
 
-SELECT B.Telefono,C.*
-FROM CTE_PERSONA_SIN_CEDULA A
-INNER JOIN GOLKIIDATA.DBO.Telefonos B ON A.TEL = B.Telefono 
-INNER JOIN GOLKIIDATA.dbo.Persona C ON B.IdPersonas = C.IdPersona
+UPDATE #TEMP_PERSONA
+SET CEDULA  = NULL 
+WHERE CEDULA NOT LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][a-Z]'
 
-SELECT * FROM #TEMP_TELEFONOS WHERE CEDULA IS NULL
+INSERT INTO BD_REF.PERSONA
+(NOMBRE,CEDULA, LOTE)
+SELECT A.NOMBRE,A.CEDULA,2
+FROM #TEMP_PERSONA A
+LEFT JOIN BD_REF.PERSONA B ON A.NOMBRE COLLATE DATABASE_DEFAULT = B.NOMBRE COLLATE DATABASE_DEFAULT
+WHERE B.NOMBRE IS NULL
+
+UPDATE #UNREPEATED
+SET CEDULA  = NULL 
+WHERE CEDULA NOT LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][a-Z]'
+
+
+
+
+select 
+    a.TEL,b.id as [idpersona],0 as called,null as datecall,2 as lote
+into #joinedData
+from #UNREPEATED a
+inner join BD_REF.persona b on a.nombre collate database_default = b.nombre collate database_default
+            and a.CEDULA collate database_default = b.cedula collate database_default
+where b.lote = 2
+
+
+insert into BD_REF.Telefono 
+(telefono,idpersona,called,datecall,lote)
+ select 
+    a.tel,
+    a.idpersona,
+    0,
+    null,
+    2
+  from #joinedData a
+left join BD_REF.telefono b on a.TEL collate database_default = b.telefono collate database_default
+where b.telefono is null
 
 DROP TABLE #TEMP_TELEFONOS
 DROP TABLE #TEMP_PERSONA
-
+DROP TABLE #REPEATED
+DROP TABLE #UNREPEATED
+drop table #joinedData
 
 
 

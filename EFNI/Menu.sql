@@ -64,32 +64,32 @@ as
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        and (a.SalarioInss >= 15000 OR A.Salario >= 15000)
+        and (a.SalarioInss >= 18000 OR A.Salario >= 18000)
         and (
-                a.Departamento in ('LEON','CHINANDEGA')
-                OR
-                A.Municipios IN ('BLUEFIELDS')
+                a.Departamento in ('managua')
+                -- --OR
+                -- --A.Municipios IN ('BLUEFIELDS')
         )
         -- and  a.StatusCredex is null
-        -- AND StatusCredex IN ('Linea Autorizada','Aprobado Credex','Linea Suspendida','Cancelado','En Proceso')
+        -- AND StatusCredex IN ('Linea Autorizada','Verificado','Aprobado Credex')
         -- Suspendida   -> Por mora menor a 60 dias
         -- Cancelado    -> Inicio tramite de apertura de cuenta pero no termino
         -- En proceso   -> Cuenta en tramite de apertura
 )
 -- MENU
 -- SELECT  
---     -- A.Departamento,
---     A.Municipios,
+--     A.Departamento,
+--     -- A.Municipios,
 --     COUNT(A.IdPersona) [MENU]
 -- FROM cte_Personas A
 -- INNER join cte_Tarjeta  B on B.IdCliente = A.IdPersona
 -- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
--- GROUP BY A.Municipios
+-- GROUP BY A.Departamento
 -- -- --GROUP BY A.Municipios
 -- ORDER BY [MENU]
 
 -- Carga de base
-select 
+select top 4000
     a.Nombre,
     a.Cedula,
     a.Domicilio,

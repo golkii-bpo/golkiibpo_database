@@ -122,64 +122,36 @@ FROM #TEMP_TELEFONO WHERE TEL NOT LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]
 
 DELETE FROM #TEMP_TELEFONO WHERE TEL NOT LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
 
+
+SELECT * FROM BD_REF.Telefono
+SELECT * FROM #TEMP_TELEFONO
+DELETE FROM #TEMP_TELEFONO WHERE TEL = '22225603'
+--FC
+DELETE FROM #TEMP_TELEFONO WHERE TEL = '22226565'
+--FC
+DELETE FROM #TEMP_TELEFONO WHERE TEL =  '22256014'
+
+select 
+a.*,
+ROW_NUMBER() over (partition by tel order by tel) as n
+into #repeated
+from #TEMP_TELEFONO a
+delete from #repeated where n = 1
+
+select * from #repeated
+
+select * from #TEMP_TELEFONO a
+left join #repeated b on a.TEL = b.TEL
+where b.TEL is  null
+order by a.tel
+
+-- EVITO INGRESAR NUMEROS REPETIDOS PARA NO HACER CONFLICTO CON LA PRIMARY KEY
+INSERT INTO BD_REF.Telefono
+(TELEFONO,IdPersona,CALLED,DATECALL,LOTE)
+SELECT 
+    A.TEL,B.ID,1,'2019-06-24',1
+FROM #TEMP_TELEFONO A
+INNER JOIN BD_REF.PERSONA B ON A.NAME = B.NOMBRE
+left join #repeated c on a.TEL = c.TEL
+where c.TEL is  null
 --###########################--###########################--###########################--#####################
-
-SELECT c.IdPersona,c.Nombre,b.Telefono, A.*
-FROM #TEMP_TELEFONO A
-INNER JOIN GOLKIIDATA.DBO.Telefonos B ON A.TEL=B.Telefono
-INNER JOIN GOLKIIDATA.DBO.Persona C ON C.IdPersona = B.IdPersonas
-WHERE C.Nombre LIKE '%'+REPLACE(A.NAME,' ','%')+'%'
-
-
--- DELETE
-SELECT *
-FROM GOLKIIDATA.DBO.Persona
-WHERE 
--- IdProcedencia = 6 AND 
--- Cedula IS NULL OR 
-Cedula IN (
-'2841704710001S',
-'6032505800005U',
-'4061703920000S',
-'4022511880000P',
-'1212305840009Q'
-)
-
-UPDATE
-GOLKIIDATA.DBO.Telefonos
-SET IdProcedencia = 6 
-FROM #TEMP_TELEFONO A
-INNER JOIN GOLKIIDATA.DBO.Telefonos B ON A.TEL=B.Telefono
-
-
-SELECT * 
-FROM GOLKIIDATA.DBO.Telefonos 
-WHERE IdProcedencia = 6 
-
-
-
-UPDATE
-    GOLKIIDATA.DBO.Telefonos
-    SET IdProcedencia = 6
-FROM  #TEMP_TELEFONO A
-INNER JOIN GOLKIIDATA.DBO.Telefonos B ON A.TEL = B.Telefono
-
-
-
-select * from Persona where IdProcedencia = 6 and Cedula is null
-
-
-
-UPDATE 
-GOLKIIDATA.DBO.Telefonos
-    SET IdPersonas = 1
-FROM GOLKIIDATA.DBO.Telefonos A
-INNER JOIN #TEMP_
-WHERE A.IdProcedencia = 6
-
-
-
-
-
-
-
