@@ -5,7 +5,7 @@ end
  
 SELECT address3, phone_number, alt_phone
 into #TempData
-FROM OPENQUERY ([VICIDIAL], 'select address3, phone_number, alt_phone from vicidial_list where list_id = 300000368')
+FROM OPENQUERY ([VICIDIAL], 'select address3, phone_number, alt_phone from vicidial_list where list_id = 300000391')
 
 DECLARE @IdCampaign AS VARCHAR(8) SET @IdCampaign = 'EFNI'
 UPDATE

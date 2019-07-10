@@ -1,3 +1,6 @@
+use BaseControl
+go
+
 if(object_id('tempdb.dbo.#TempData') is not null)
 begin
     drop table #TempData
@@ -15,6 +18,7 @@ as
         inner join Telefonos b on a.IdTelefono = b.IdTelefono 
     where 
         a.IdCampaign = 'EFNI' and a.Disponible = 1 and STR(b.Telefono,8,0) like '[5,6,7,8,9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' and b.Estado = 1 and a.Estado = 1
+        
 ),
 cte_PersonaDisponibles
 as
@@ -57,17 +61,28 @@ cte_Personas
 as
 (
     select 
-        a.* 
+        a.* ,
+        CASE
+            WHEN (Salario IS NULL OR SalarioInss IS NULL) THEN 'NULL'
+            WHEN (Salario < 5000 OR SalarioInss < 5000) THEN '<5K'
+            WHEN (Salario BETWEEN 5000 AND 10000 OR SalarioInss BETWEEN 5000 AND 10000) THEN '5K-10K'
+            WHEN (Salario BETWEEN 10001 AND 15000 OR SalarioInss BETWEEN 10001 AND 15000) THEN '10K-15K'
+            WHEN (Salario BETWEEN 15001 AND 20000 OR SalarioInss BETWEEN 15001 AND 20000) THEN '15K-20K'
+            WHEN (Salario BETWEEN 20001 AND 30000 OR SalarioInss BETWEEN 20001 AND 30000) THEN '20K-30K'
+            ELSE '>30K'
+        END AS SALKIND
     from   
         Persona a 
         inner join cte_PersonaDisponibles b on a.IdPersona = b.IdPersona 
     where 
         a.IsWorking = 1
         and a.Estado = 1
-        AND 
-        (Salario > 10000 OR SalarioInss > 10000)
-        AND 
-        A.Departamento IN ('RAAS')
+        -- and (a.SalarioInss >= 9000 OR A.Salario >= 9000)
+        -- and (
+        --         a.Departamento in ('managua')
+        --         -- --OR
+        --         -- --A.Municipios IN ('BLUEFIELDS')
+        -- )
         -- and  a.StatusCredex is null
         -- AND StatusCredex IN ('Linea Autorizada','Aprobado Credex')
         -- Suspendida   -> Por mora menor a 60 dias
@@ -77,14 +92,16 @@ as
 -- -- MENU
 -- SELECT  
 --     A.Departamento,
+--     A.SALKIND AS SALARIO,
 --     -- A.Municipios,
---     COUNT(A.IdPersona) [MENU]
+--     COUNT(A.IdPersona) [CANTIDAD]
 -- FROM cte_Personas A
 -- INNER join cte_Tarjeta  B on B.IdCliente = A.IdPersona
 -- inner join cte_Telefonos    C on C.IdPersona = A.IdPersona
--- GROUP BY A.Departamento
+-- WHERE A.Departamento IS NOT NULL
+-- GROUP BY A.Departamento,A.SALKIND
 -- -- --GROUP BY A.Municipios
--- ORDER BY [MENU]
+-- ORDER BY [CANTIDAD]
 
 -- Carga de base
 select 
@@ -105,28 +122,6 @@ from
     inner join cte_Telefonos c on c.IdPersona = a.IdPersona
     
 select * from #TempData
-
-
-
-/*SE HACE UPDATE A LOS TELEFONOS PARA QUE NO SE VUELVAN A LLAMAR*/
-
-DECLARE @IdCampaign AS VARCHAR(8) SET @IdCampaign = 'EFNI'
-UPDATE
-	D
-SET
-	D.Disponible = 0
-FROM 
-	#TempData A 
-	INNER JOIN dbo.Persona B ON B.Cedula = A.Cedula
-	INNER JOIN dbo.Telefonos C ON C.IdPersona = B.IdPersona
-	INNER JOIN dbo.TelefonosPerCampaign D ON D.IdTelefono = C.IdTelefono AND D.IdCampaign = @IdCampaign
-WHERE
-	D.Disponible = 1
-
-INSERT INTO dbo.RegistroLlamadas (IdPersona,IdCampania,Telefono,Alt_Phone)
-SELECT B.IdPersona,1,A.Telefono,A.Alt_Phone FROM #TempData A INNER JOIN dbo.Persona B ON B.Cedula = A.Cedula
-
-DROP TABLE #TempData
 
 
 

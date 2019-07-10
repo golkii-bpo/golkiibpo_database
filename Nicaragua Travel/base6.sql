@@ -63,7 +63,13 @@ as (
     INNER JOIN CTE_PIVOT_TELEFONO B ON A.IdPersona = B.IdPersona
     LEFT JOIN NICATRAV.BD_REF.PERSONA C ON A.Cedula = C.CEDULA COLLATE  DATABASE_DEFAULT
     WHERE C.CEDULA IS NULL
-),
+)
+select * 
+into #tempbase
+from cte_base;
+
+
+with
 CTE_PERSONAS_NO_DISPONIBLES
 AS(
 select address3 COLLATE DATABASE_DEFAULT as cedula 
@@ -82,11 +88,21 @@ AS (
     FROM CTE_PERSONAS_NO_DISPONIBLES 
     WHERE CEDULA LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][a-Z]' 
 )
+select * 
+into #tempExclude
+from CTE_FILTER_CEDULA
+
+
 
 select * 
-from cte_base a
-left join  CTE_FILTER_CEDULA b on a.Cedula = b.cedula
-WHERE b.cedula is null
+from #tempbase a
+left join #tempExclude b on a.Cedula collate database_default = b.cedula collate database_default 
+where b.cedula is null
+
+-- select * 
+-- from cte_base a
+-- left join  CTE_FILTER_CEDULA b on a.Cedula = b.cedula
+-- WHERE b.cedula is null
 
 
 

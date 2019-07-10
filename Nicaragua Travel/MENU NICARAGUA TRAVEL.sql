@@ -1,16 +1,20 @@
 -- 1000 FICOHSA BANPRO LAFISE
+-- SE DEBE HACER EL FILTRO UNICO POR BANCOS
+
+
 WITH 
 CTE_PERSONA
 AS(
     SELECT * FROM BASECONTROL.DBO.Persona
-    WHERE (Salario BETWEEN 50000 AND 90000) OR (SalarioInss  BETWEEN 50000 AND 90000)
-    AND Municipios = 'MANAGUA'
-    AND Domicilio IS NOT NULL
+    -- WHERE (Salario BETWEEN 50000 AND 90000) OR (SalarioInss  BETWEEN 50000 AND 90000)
+    WHERE (Salario > 30000 OR SalarioInss > 30000)
+    AND DEPARTAMENTO = 'CHONTALES'
+    -- AND Domicilio IS NOT NULL
 ),
 CTE_BANCOS 
 AS (
    SELECT IdBancos,Banco FROM BaseControl.dbo.Bancos 
-   WHERE Banco IN ('FICOHSA')
+--    WHERE Banco IN ('FICOHSA','BANPRO','LAFISE')
 ),
 CTE_TARJETA
 AS (
@@ -20,7 +24,9 @@ AS (
         B.Domicilio,
         B.Salario,
         B.Cedula,
-        C.Banco
+        C.Banco,
+        B.Departamento,
+        B.Municipios
     FROM BaseControl.dbo.Tarjetas A
     INNER JOIN CTE_PERSONA B ON A.IdCliente = B.IdPersona
     INNER JOIN CTE_BANCOS C ON A.IdBancos = C.IdBancos
@@ -58,12 +64,20 @@ as (
         Banco,
         [1] AS TEL1,
         [2] AS TEL2,
-        [3] AS TEL3
+        [3] AS TEL3,
+        A.Departamento,
+        A.Municipios
     from CTE_TARJETA A
     INNER JOIN CTE_PIVOT_TELEFONO B ON A.IdPersona = B.IdPersona
     LEFT JOIN NICATRAV.BD_REF.PERSONA C ON A.Cedula = C.CEDULA COLLATE  DATABASE_DEFAULT
     WHERE C.CEDULA IS NULL
-),
+)
+select * 
+into #tempbase
+from cte_base;
+
+
+with
 CTE_PERSONAS_NO_DISPONIBLES
 AS(
 select address3 COLLATE DATABASE_DEFAULT as cedula 
@@ -82,11 +96,38 @@ AS (
     FROM CTE_PERSONAS_NO_DISPONIBLES 
     WHERE CEDULA LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][a-Z]' 
 )
+select * 
+into #tempExclude
+from CTE_FILTER_CEDULA;
+
+
+WITH CTE_DATA
+AS(
+    select 
+        DISTINCT
+        A.Nombre,
+        A.Domicilio,
+        A.Salario,
+        A.Cedula,
+        A.Departamento,
+        A.TEL1,
+        A.TEL2,
+        A.TEL3
+    from #tempbase a
+    left join #tempExclude b on a.Cedula collate database_default = b.cedula collate database_default 
+    where b.cedula is null
+)
+-- SELECT 
+--     Departamento,
+--     COUNT(Departamento)
+-- FROM CTE_DATA
+-- GROUP BY Departamento
+
 
 select * 
-from cte_base a
-left join  CTE_FILTER_CEDULA b on a.Cedula = b.cedula
-WHERE b.cedula is null
+from CTE_DATA
 
 
 
+DROP TABLE #tempbase
+DROP TABLE #tempExclude

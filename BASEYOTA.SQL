@@ -1,0 +1,42 @@
+
+
+WITH CTE_DATA
+AS(
+    select * 
+    from BasesRecibidas..bd_eveling_27062019
+    UNPIVOT( TELEFONO FOR TELNO IN (TEL1,TEL2) )U
+    WHERE TELEFONO LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+),
+CTE_NUEVOS
+AS (
+    SELECT A.*
+    FROM CTE_DATA A
+    LEFT JOIN Telefonos B ON A.TELEFONO = B.Telefono
+    WHERE B.Telefono IS NULL
+),
+CTE_FILTRADA
+AS(
+    SELECT  
+        A.NOMBRE,
+        A.TELEFONO,
+        A.TELNO,
+        B.IdPersona
+    FROM CTE_NUEVOS A
+    INNER JOIN Persona B ON A.NOMBRE COLLATE DATABASE_DEFAULT = B.Nombre
+)
+SELECT 
+    IdPersona,
+    NOMBRE,
+    CASE
+        WHEN TEL1 IS NOT NULL THEN TEL1
+        ELSE TEL2
+    END AS TEL1,
+    
+    CASE
+        WHEN TEL1 IS NOT NULL THEN TEL2
+        ELSE NULL
+    END AS TEL2
+INTO BASEYOTA
+FROM CTE_FILTRADA
+PIVOT (MAX(TELEFONO) FOR TELNO IN (TEL1,TEL2)) P
+
