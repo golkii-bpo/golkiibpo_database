@@ -7,14 +7,15 @@ CTE_PERSONA
 AS(
     SELECT * FROM BASECONTROL.DBO.Persona
     -- WHERE (Salario BETWEEN 50000 AND 90000) OR (SalarioInss  BETWEEN 50000 AND 90000)
-    WHERE (Salario > 30000 OR SalarioInss > 30000)
-    AND DEPARTAMENTO = 'CHONTALES'
+    WHERE (Salario > 40000 OR SalarioInss > 40000)
+    AND DEPARTAMENTO = 'Managua'
     -- AND Domicilio IS NOT NULL
+    AND CEDULA IS NOT NULL
 ),
 CTE_BANCOS 
 AS (
    SELECT IdBancos,Banco FROM BaseControl.dbo.Bancos 
---    WHERE Banco IN ('FICOHSA','BANPRO','LAFISE')
+   WHERE Banco IN ('FICOHSA','BANPRO','LAFISE')
 ),
 CTE_TARJETA
 AS (
@@ -86,7 +87,7 @@ select address3 COLLATE DATABASE_DEFAULT as cedula
 'select b.address3
 from vicidial_lists a
 inner join vicidial_list b on a.list_id = b.list_id
-where list_name like ''nt%''
+where list_name like ''NT%''
 and b.address3 is not NULL
 and b.address3 != ''''')
 ),
@@ -124,7 +125,7 @@ AS(
 -- GROUP BY Departamento
 
 
-select * 
+select top 1000 * 
 from CTE_DATA
 
 

@@ -1,16 +1,16 @@
 /*Esta Logica se va a crear por cada una de las campañias Que se vayan a crear*/
 
-CREATE DATABASE EFNI
+CREATE DATABASE NICTRAV
 
 GO
 
-USE EFNI
+USE NICTRAV
 
 GO
 
 CREATE TABLE Telefono 
 (
-    EFNI_Telefono INT PRIMARY KEY,
+    NICTRAV_Telefono INT PRIMARY KEY,
     LastIdPersona INT NULL,
     Tipificacion VARCHAR(20),
     FechaLlamada DATETIME,
@@ -25,7 +25,7 @@ GO
 
 CREATE TABLE Persona 
 (
-    EFNI_Persona INT PRIMARY KEY,
+    NICTRAV_Persona INT PRIMARY KEY,
     UltimaLlamada DATETIME,
     CCMensual INT DEFAULT 0,
     CCGlobal INT DEFAULT 0,
@@ -50,7 +50,7 @@ CREATE TABLE LogReproceso
 GO
 
 -- =============================================
--- Se tiene que realizar un reemplazo de todas las referencias de la campañia de EFNI
+-- Se tiene que realizar un reemplazo de todas las referencias de la campañia de NICTRAV
 -- Para que pueda funcionar en otras campañias
 -- =============================================
 
@@ -67,7 +67,7 @@ AS
 BEGIN
     UPDATE A
     SET A.CCMensual = 0
-    FROM EFNI.dbo.Persona A;
+    FROM NICTRAV.dbo.Persona A;
 END;
 
 GO
@@ -88,10 +88,10 @@ BEGIN
             @Fecha AS DATETIME;
     --SE INGRESA EL ULTIMO REGISTRO INGRESADO DEL MYSQL
     SELECT @Fecha = MAX(A.FechaLlamada)
-    FROM EFNI.dbo.Telefono A;
-    SET @Q = CONCAT('CALL EFNI.LoadTempData(''', CONVERT(VARCHAR, @Fecha, 120), ''');');
+    FROM NICTRAV.dbo.Telefono A;
+    SET @Q = CONCAT('CALL NICTRAV.LoadTempData(''', CONVERT(VARCHAR, @Fecha, 120), ''');');
 
-    -- SE EJECUTA LoadTempData DE LA BASE DE DATOS EFNI EN EL MYSQL. 
+    -- SE EJECUTA LoadTempData DE LA BASE DE DATOS NICTRAV EN EL MYSQL. 
     -- ESTO LO QUE HACE ES QUE LLENA UNA TABLA CON TODOS AQUELLOS REGISTROS QUE SE HAN MARCADO DESPUES DEL ULTIMO REGISTRO QUE HAY
     -- EN LA BASE DE DATOS
     EXECUTE (@Q) AT [VICIDIAL];
@@ -109,7 +109,7 @@ BEGIN
            A.Tipificacion
     INTO #TempData
     FROM OPENQUERY
-         ([VICIDIAL], 'select a.* from EFNI.Telefonos a') A;
+         ([VICIDIAL], 'select a.* from NICTRAV.Telefonos a') A;
 
     IF (OBJECT_ID('tempdb..#TempDataResume') IS NOT NULL)
     BEGIN
@@ -138,7 +138,7 @@ BEGIN
         DECLARE @Lote AS INT;
         SET @Lote = ISNULL(
                     (
-                        SELECT MAX(A.Lote) FROM EFNI.dbo.Telefono A
+                        SELECT MAX(A.Lote) FROM NICTRAV.dbo.Telefono A
                     ),
                     0
                           );
@@ -151,13 +151,13 @@ BEGIN
             B.Tipificacion = A.Tipificacion,
             B.Lote = @Lote
         FROM #TempDataResume A
-            INNER JOIN EFNI.dbo.Telefono B
-                ON A.Telefono = B.EFNI_Telefono;
+            INNER JOIN NICTRAV.dbo.Telefono B
+                ON A.Telefono = B.NICTRAV_Telefono;
 
         -- SE INGRESAN AQUELLOS NUMEROS QUE NO ESTAN REGISTRADOS
-        INSERT INTO EFNI.dbo.Telefono
+        INSERT INTO NICTRAV.dbo.Telefono
         (
-            EFNI_Telefono,
+            NICTRAV_Telefono,
             CalledCount,
             FechaLlamada,
             Tipificacion,
@@ -169,21 +169,21 @@ BEGIN
                A.Tipificacion,
                @Lote
         FROM #TempDataResume A
-            LEFT JOIN EFNI.dbo.Telefono B
-                ON A.Telefono = B.EFNI_Telefono
-        WHERE B.EFNI_Telefono IS NULL
+            LEFT JOIN NICTRAV.dbo.Telefono B
+                ON A.Telefono = B.NICTRAV_Telefono
+        WHERE B.NICTRAV_Telefono IS NULL
 
         -- SE MOFICAN LAS PERSONAS QUE YA SE TIENE REGISTRO
         ;
         WITH cte_Data
-        AS (SELECT B.IdPersonas [EFNI_Persona],
+        AS (SELECT B.IdPersonas [NICTRAV_Persona],
                    SUM(A.CalledCount) [CC],
                    MAX(A.FechaLlamada) [UL]
-            FROM EFNI.dbo.Telefono A
+            FROM NICTRAV.dbo.Telefono A
                 INNER JOIN GOLKIIDATA.dbo.Telefonos B
-                    ON A.EFNI_Telefono = B.Telefono
-                INNER JOIN EFNI.dbo.Persona C
-                    ON C.EFNI_Persona = B.IdPersonas
+                    ON A.NICTRAV_Telefono = B.Telefono
+                INNER JOIN NICTRAV.dbo.Persona C
+                    ON C.NICTRAV_Persona = B.IdPersonas
             WHERE A.Lote = @Lote
             GROUP BY B.IdPersonas)
         UPDATE B
@@ -191,32 +191,32 @@ BEGIN
             B.UltimaLlamada = A.UL,
             B.Disponible = 0
         FROM cte_Data A
-            INNER JOIN EFNI.dbo.Persona B
-                ON A.EFNI_Persona = B.EFNI_Persona
+            INNER JOIN NICTRAV.dbo.Persona B
+                ON A.NICTRAV_Persona = B.NICTRAV_Persona
 
         -- SE AGREGAN LAS PERSONAS QUE NO POSEEN UN REGISTRO
         ;
         WITH cte_Data
-        AS (SELECT B.IdPersonas [EFNI_Persona],
+        AS (SELECT B.IdPersonas [NICTRAV_Persona],
                    SUM(A.CalledCount) [CC],
                    MAX(A.FechaLlamada) [UL]
-            FROM EFNI.dbo.Telefono A
+            FROM NICTRAV.dbo.Telefono A
                 INNER JOIN GOLKIIDATA.dbo.Telefonos B
-                    ON A.EFNI_Telefono = B.Telefono
-                LEFT JOIN EFNI.dbo.Persona C
-                    ON C.EFNI_Persona = B.IdPersonas
+                    ON A.NICTRAV_Telefono = B.Telefono
+                LEFT JOIN NICTRAV.dbo.Persona C
+                    ON C.NICTRAV_Persona = B.IdPersonas
             WHERE A.Lote = @Lote
-                  AND C.EFNI_Persona IS NULL
+                  AND C.NICTRAV_Persona IS NULL
             GROUP BY B.IdPersonas)
-        INSERT INTO EFNI.dbo.Persona
+        INSERT INTO NICTRAV.dbo.Persona
         (
-            EFNI_Persona,
+            NICTRAV_Persona,
             CCGlobal,
             CCMensual,
             UltimaLlamada,
             Disponible
         )
-        SELECT A.EFNI_Persona,
+        SELECT A.NICTRAV_Persona,
                A.CC,
                A.CC,
                A.UL,
@@ -226,18 +226,18 @@ BEGIN
         --SE ACTUALIZAN LOS CALLCOUNTS MENSUALES
         ;
         WITH cte_Data
-        AS (SELECT B.EFNI_Persona,
+        AS (SELECT B.NICTRAV_Persona,
                    COUNT(1) [CCM]
-            FROM EFNI.dbo.Telefono A
-                INNER JOIN EFNI.dbo.Persona B
-                    ON A.LastIdPersona = B.EFNI_Persona
+            FROM NICTRAV.dbo.Telefono A
+                INNER JOIN NICTRAV.dbo.Persona B
+                    ON A.LastIdPersona = B.NICTRAV_Persona
             WHERE A.Lote = @Lote
-            GROUP BY B.EFNI_Persona)
+            GROUP BY B.NICTRAV_Persona)
         UPDATE B
         SET B.CCMensual += A.CCM
         FROM cte_Data A
-            INNER JOIN EFNI.dbo.Persona B
-                ON A.EFNI_Persona = B.EFNI_Persona;
+            INNER JOIN NICTRAV.dbo.Persona B
+                ON A.NICTRAV_Persona = B.NICTRAV_Persona;
         PRINT 'SE REALIZO EL COMMIT';
         COMMIT TRANSACTION;
     END TRY
@@ -251,7 +251,7 @@ BEGIN
     DROP TABLE #TempDataResume;
 
     -- Se libera recursos del mysql
-    EXECUTE ('CALL EFNI.CleanTempData();') AT [VICIDIAL];
+    EXECUTE ('CALL NICTRAV.CleanTempData();') AT [VICIDIAL];
 END;
 
 GO
@@ -331,9 +331,9 @@ BEGIN
     SELECT *
     INTO #TempStatuses
     FROM OPENQUERY
-         ([VICIDIAL], 'select * from vicidial_campaign_statuses where campaign_id = ''EFNI'';');
+         ([VICIDIAL], 'select * from vicidial_campaign_statuses where campaign_id = ''NICTRAV'';');
 
-    INSERT INTO EFNI.dbo.CampaingStatuses
+    INSERT INTO NICTRAV.dbo.CampaingStatuses
     (
         IdStatus,
         status_name,
@@ -359,7 +359,7 @@ BEGIN
            IIF(A.completed = 'Y', 1, 0),
            'CAMPAIGN'
     FROM #TempStatuses A
-        LEFT JOIN EFNI.dbo.CampaingStatuses B
+        LEFT JOIN NICTRAV.dbo.CampaingStatuses B
             ON A.[status] = B.IdStatus
                AND B.Fuente = 'CAMPAIGN'
     WHERE B.IdStatus IS NULL;
@@ -368,7 +368,7 @@ BEGIN
 
     UPDATE A
     SET A.Estado = 0
-    FROM EFNI.dbo.CampaingStatuses A
+    FROM NICTRAV.dbo.CampaingStatuses A
         LEFT JOIN #TempStatuses B
             ON A.IdStatus = B.[status]
                AND A.Fuente = 'CAMPAIGN'
@@ -376,7 +376,7 @@ BEGIN
 
     UPDATE A
     SET A.Estado = 1
-    FROM EFNI.dbo.CampaingStatuses A
+    FROM NICTRAV.dbo.CampaingStatuses A
         INNER JOIN #TempStatuses B
             ON A.IdStatus = B.[status]
     WHERE A.Fuente = 'CAMPAIGN'
@@ -395,7 +395,7 @@ BEGIN
          ([VICIDIAL], 'select * from asterisk.vicidial_statuses a where a.selectable = ''Y''') A;
 
     --SE INGRESA LA DATA DEL SISTEMA
-    INSERT INTO EFNI.dbo.CampaingStatuses
+    INSERT INTO NICTRAV.dbo.CampaingStatuses
     (
         IdStatus,
         status_name,
@@ -419,7 +419,7 @@ BEGIN
            IIF(A.scheduled_callback = 'Y', 1, 0),
            IIF(A.completed = 'Y', 1, 0)
     FROM #TempSystemStatuses A
-        LEFT JOIN EFNI.dbo.CampaingStatuses B
+        LEFT JOIN NICTRAV.dbo.CampaingStatuses B
             ON A.[status] = B.IdStatus
                AND B.Fuente = 'SYSTEM'
     WHERE B.IdStatus IS NULL;
@@ -427,7 +427,7 @@ BEGIN
     -- SE ACTUALIZA DE AQUELLOS REGISTROS QUE YA NO SE ENCUENTRAN DISPONIBLES
     UPDATE A
     SET A.Estado = 0
-    FROM EFNI.dbo.CampaingStatuses A
+    FROM NICTRAV.dbo.CampaingStatuses A
         INNER JOIN #TempSystemStatuses B
             ON A.IdStatus = B.[status]
                AND A.Fuente = 'SYSTEM'
@@ -436,7 +436,7 @@ BEGIN
     --SE ACTUALIZAN AQUELLOS REGISTROS QUE ESTABAN DESACTIVADOS PARA QUE VUELVAN A ENTRAR AL PROCESO
     UPDATE A
     SET A.Estado = 1
-    FROM EFNI.dbo.CampaingStatuses A
+    FROM NICTRAV.dbo.CampaingStatuses A
         INNER JOIN #TempSystemStatuses B
             ON A.IdStatus = B.[status]
                AND A.Fuente = 'SYSTEM'
@@ -461,7 +461,7 @@ CREATE PROCEDURE dbo.LlenarTipificaciones
 AS
 BEGIN
 	-- SE INGRESAN TODAS LAS TIPIFICACIONES NORMALES
-	INSERT INTO EFNI.dbo.PoliticaReprocesamiento
+	INSERT INTO NICTRAV.dbo.PoliticaReprocesamiento
 	(
 		IdTipificacion,
 		Tipificacion,
@@ -471,10 +471,10 @@ BEGIN
 		Fuente,
 		Estado
 	)
-	SELECT A.IdStatus,A.status_name,90,NULL,NULL,A.Fuente,1FROM EFNI.dbo.CampaingStatuses A LEFT JOIN EFNI.dbo.PoliticaReprocesamiento B ON A.IdStatus = B.IdTipificacion WHERE B.IdTipificacion IS NULL AND A.dnc != 1 AND A.schedule_callback != 1;
+	SELECT A.IdStatus,A.status_name,90,NULL,NULL,A.Fuente,1FROM NICTRAV.dbo.CampaingStatuses A LEFT JOIN NICTRAV.dbo.PoliticaReprocesamiento B ON A.IdStatus = B.IdTipificacion WHERE B.IdTipificacion IS NULL AND A.dnc != 1 AND A.schedule_callback != 1;
 
 	-- SE INGRESAN TODAS LAS TIPIFICIACIONES CON DNC
-	INSERT INTO EFNI.dbo.PoliticaReprocesamiento
+	INSERT INTO NICTRAV.dbo.PoliticaReprocesamiento
 	(
 		IdTipificacion,
 		Tipificacion,
@@ -484,10 +484,10 @@ BEGIN
 		Estado,
 		Fuente
 	)
-	SELECT A.IdStatus,A.status_name,180,NULL,NULL,1,A.Fuente FROM EFNI.dbo.CampaingStatuses A LEFT JOIN EFNI.dbo.PoliticaReprocesamiento B ON A.IdStatus = B.IdTipificacion WHERE B.IdTipificacion IS NULL AND A.dnc = 1
+	SELECT A.IdStatus,A.status_name,180,NULL,NULL,1,A.Fuente FROM NICTRAV.dbo.CampaingStatuses A LEFT JOIN NICTRAV.dbo.PoliticaReprocesamiento B ON A.IdStatus = B.IdTipificacion WHERE B.IdTipificacion IS NULL AND A.dnc = 1
 
 	-- SE INGRESAN TODOS AQUELLOS QUE SON CALLBACKS
-	INSERT INTO EFNI.dbo.PoliticaReprocesamiento
+	INSERT INTO NICTRAV.dbo.PoliticaReprocesamiento
 	(
 		IdTipificacion,
 		Tipificacion,
@@ -497,7 +497,7 @@ BEGIN
 		Estado,
 		Fuente
 	)
-	SELECT A.IdStatus,A.status_name,90,NULL,NULL,1,A.Fuente FROM EFNI.dbo.CampaingStatuses A LEFT JOIN EFNI.dbo.PoliticaReprocesamiento B ON A.IdStatus = B.IdTipificacion WHERE B.IdTipificacion IS NULL AND A.schedule_callback = 1
+	SELECT A.IdStatus,A.status_name,90,NULL,NULL,1,A.Fuente FROM NICTRAV.dbo.CampaingStatuses A LEFT JOIN NICTRAV.dbo.PoliticaReprocesamiento B ON A.IdStatus = B.IdTipificacion WHERE B.IdTipificacion IS NULL AND A.schedule_callback = 1
 END
 
 GO
@@ -528,7 +528,7 @@ BEGIN
 	INTO 
 		#TempReprocesamiento
 	FROM 
-		EFNI.dbo.PoliticaReprocesamiento A
+		NICTRAV.dbo.PoliticaReprocesamiento A
 
 	DECLARE 
 		@IdTipificacion AS VARCHAR(6),
@@ -559,7 +559,7 @@ BEGIN
 			A.Reprocesada = 1,
 			A.FechaReprocesamiento = @F
 		FROM 
-			EFNI.dbo.Telefono A 
+			NICTRAV.dbo.Telefono A 
 		WHERE 
 			A.Tipificacion = @IdTipificacion 
 			AND DATEDIFF(DAY,A.FechaLlamada,@DayWithOutCall) <= @DayWithOutCall
@@ -584,7 +584,7 @@ AS
 BEGIN
 	
 	DECLARE @Lote AS INT 
-	SET @Lote = ISNULL((SELECT MAX(A.Lote) FROM EFNI.dbo.Persona A),0)
+	SET @Lote = ISNULL((SELECT MAX(A.Lote) FROM NICTRAV.dbo.Persona A),0)
 	SET @Lote += 1;
 
 	UPDATE A
@@ -594,12 +594,12 @@ BEGIN
 		A.FechaReprocesamiento = GETDATE(),
 		A.Lote = @Lote
 	FROM 
-		EFNI.dbo.Persona A
+		NICTRAV.dbo.Persona A
 		OUTER APPLY (
-			SELECT B.EFNI_Telefono FROM EFNI.dbo.Telefono B WHERE B.LastIdPersona = A.EFNI_Persona AND A.Disponible = 0 AND B.EFNI_Telefono IS NOT NULL
+			SELECT B.NICTRAV_Telefono FROM NICTRAV.dbo.Telefono B WHERE B.LastIdPersona = A.NICTRAV_Persona AND A.Disponible = 0 AND B.NICTRAV_Telefono IS NOT NULL
 		) C
 	WHERE 
-		C.EFNI_Telefono IS NULL
+		C.NICTRAV_Telefono IS NULL
 		AND A.Disponible = 0
 END
 
@@ -617,8 +617,8 @@ AS
 BEGIN
 	BEGIN TRANSACTION
 	BEGIN TRY
-		EXECUTE EFNI.dbo.ReprocesoTelefonos
-		EXECUTE EFNI.dbo.ReprocesoPersona
+		EXECUTE NICTRAV.dbo.ReprocesoTelefonos
+		EXECUTE NICTRAV.dbo.ReprocesoPersona
 		COMMIT TRANSACTION
 	END TRY
 	BEGIN CATCH

@@ -1,0 +1,254 @@
+
+DECLARE @CAMPAING_ID NVARCHAR(15)
+DECLARE @PROFILE_ID INT
+DECLARE @SALARIO_MIN FLOAT
+DECLARE @SALARIO_MAX FLOAT
+DECLARE @FORCE_CREDEX BIT
+DECLARE @FORCE_TC BIT
+SET @CAMPAING_ID = 'EFNI'
+SELECT  @PROFILE_ID = PROFILE_ID,
+        @SALARIO_MIN = SALARIO_MIN,
+        @SALARIO_MAX = SALARIO_MAX,
+        @FORCE_CREDEX = FORCE_CREDEX,
+        @FORCE_TC = FORCE_TC
+FROM PROFILE 
+WHERE CAMPAIGN = @CAMPAING_ID AND [STATE] = 1
+
+IF(@SALARIO_MAX IS NULL OR @SALARIO_MAX = 0 )
+BEGIN 
+    SELECT @SALARIO_MAX = MAX(Salario) FROM GOLKIIDATA.DBO.Persona
+END;
+
+
+SELECT 
+    *
+INTO #CTE_PERSONAS_DISPONIBLES
+FROM EFNI.DBO.PERSONA 
+WHERE disponible = 1;
+
+WITH
+CTE_DEMOGRAFIA
+AS(
+    SELECT 
+        A.CodMunicipio,A.Municipio,B.Departamento 
+    FROM GOLKIIDATA.DBO.Municipio A
+    INNER JOIN GOLKIIDATA.DBO.Departamento B ON A.IdDepartamento = B.IdDepartamento
+    INNER JOIN AUTOMATOR.DBO.PROFILE_DEP C ON C.PDEP = B.IdDepartamento
+    INNER JOIN AUTOMATOR.DBO.PROFILE D ON C.FKPROFILE = @PROFILE_ID
+)
+SELECT 
+    B.*,
+    C.Departamento,
+    C.Municipio
+INTO #CTE_PERSONAS
+FROM #CTE_PERSONAS_DISPONIBLES A
+INNER JOIN GOLKIIDATA.DBO.Persona B ON A.EFNI_Persona = B.IdPersona
+INNER JOIN CTE_DEMOGRAFIA C ON B.Demografia = C.CodMunicipio
+WHERE b.Salario >= @SALARIO_MIN
+AND B.Salario <= @SALARIO_MAX;
+
+WITH CTE_TARJETAS
+AS(
+    SELECT 
+        A.Banco,
+        B.IdPersona,
+        ROW_NUMBER() OVER(PARTITION BY B.IdPersona ORDER BY A.Banco) N 
+    FROM GOLKIIDATA.DBO.Bancos A
+    INNER JOIN GOLKIIDATA.DBO.Tarjetas B ON A.IdBanco = B.IdBanco
+    INNER JOIN #CTE_PERSONAS_DISPONIBLES C ON B.IdPersona = C.EFNI_Persona
+    WHERE A.IdBanco IN (
+        SELECT A.PBANCO FROM AUTOMATOR.DBO.PROFILE_BANCOS A 
+        WHERE A.FKPROFILE = @PROFILE_ID    
+    ) 
+    GROUP BY A.Banco,B.IdPersona
+)
+SELECT 
+    IdPersona,
+    [1] AS TARJETA1,
+    [2] AS TARJETA2,
+    [3] AS TARJETA3  
+INTO #CTE_TARJETAS_PIVOTED
+FROM CTE_TARJETAS
+PIVOT(MAX(BANCO) FOR N IN ([1],[2],[3]))P;
+
+WITH CTE_TELEFONOS
+AS(
+    SELECT  
+        A.IdPersonas,
+        A.Telefono,
+        ROW_NUMBER() OVER(PARTITION BY A.IdPersonas ORDER BY A.Telefono) N
+    FROM GOLKIIDATA.DBO.Telefonos A
+    INNER JOIN #CTE_PERSONAS_DISPONIBLES B ON A.IdPersonas = B.EFNI_Persona
+    WHERE A.Telefono LIKE '[8|7|5|4][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+)
+SELECT 
+    P.IdPersonas,
+    [1] AS TEL1,
+    [2] AS TEL2
+INTO #CTE_TELEFONOS_PIVOTED
+FROM CTE_TELEFONOS
+PIVOT(MAX(TELEFONO) FOR N IN ([1],[2])) P;
+
+WITH CTE_LASTCREDEX
+AS(
+    SELECT 
+        A.IdPersona,
+        MAX(A.IdCredex) AS LAST_INCOME    
+    FROM GOLKIIDATA.DBO.Credex A
+    INNER JOIN #CTE_PERSONAS_DISPONIBLES B ON A.IdPersona = B.EFNI_Persona
+    INNER JOIN GOLKIIDATA.DBO.StatusCredex C ON A.IdStatus = C.IdStatus 
+    WHERE C.Aprobado = 1
+    GROUP BY (A.IdPersona)
+)
+SELECT  
+    A.IdPersona,
+    C.Nombre AS STATUSCREDEX
+INTO #CTE_CREDEX
+FROM CTE_LASTCREDEX A
+INNER JOIN GOLKIIDATA.DBO.CREDEX B ON A.IdPersona = B.IdPersona AND A.LAST_INCOME = B.IdCredex
+INNER JOIN GOLKIIDATA.DBO.StatusCredex C ON B.IdStatus = C.IdStatus;
+
+CREATE TABLE #RESULT
+(
+    Nombre NVARCHAR(MAX),
+    Cedula VARCHAR(16),
+    Domicilio NVARCHAR(MAX),
+    Salario FLOAT,
+    Departamento NVARCHAR(50),
+    Municipio NVARCHAR(50),
+    TEL1 INT,
+    TEL2 INT,
+    TARJETA1 NVARCHAR(50),
+    STATUSCREDEX NVARCHAR(100)
+)
+
+IF(@CREDEX = 0 AND @FORCE_CREDEX = 0 AND @FORCE_TC = 0 )
+BEGIN 
+    INSERT INTO #RESULT
+    SELECT 
+        A.Nombre,
+        A.Cedula,
+        A.Domicilio,
+        A.Salario,
+        A.Departamento,
+        A.Municipio,
+        B.TEL1,
+        B.TEL2,
+        C.TARJETA1,
+        D.STATUSCREDEX
+    FROM #CTE_PERSONAS A
+    INNER JOIN #CTE_TELEFONOS_PIVOTED B ON A.IdPersona = B.IdPersonas
+    LEFT JOIN #CTE_TARJETAS_PIVOTED C ON A.IdPersona = C.IdPersona
+    LEFT JOIN #CTE_CREDEX D ON A.IdPersona = D.IdPersona WHERE D.IdPersona IS NULL
+END
+ELSE IF(@CREDEX = 0 AND @FORCE_CREDEX = 0 AND @FORCE_TC = 1)
+BEGIN 
+    INSERT INTO #RESULT
+    SELECT 
+        A.Nombre,
+        A.Cedula,
+        A.Domicilio,
+        A.Salario,
+        A.Departamento,
+        A.Municipio,
+        B.TEL1,
+        B.TEL2,
+        C.TARJETA1,
+        D.STATUSCREDEX
+    FROM #CTE_PERSONAS A
+    INNER JOIN #CTE_TELEFONOS_PIVOTED B ON A.IdPersona = B.IdPersonas
+    INNER JOIN #CTE_TARJETAS_PIVOTED C ON A.IdPersona = C.IdPersona
+    LEFT JOIN #CTE_CREDEX D ON A.IdPersona = D.IdPersona WHERE D.IdPersona IS NULL
+END
+ELSE IF(@CREDEX = 0 AND @FORCE_CREDEX = 1 AND @FORCE_TC = 0)
+BEGIN 
+    RAISERROR('NO SE PUEDE GENERAR UN RESULTADO DONDE SE FORCE CREDEX PERO NO SE ADMITAN CUENTAS DE CREDEX',1,10)
+END
+ELSE IF(@CREDEX = 0 AND @FORCE_CREDEX = 1 AND @FORCE_TC = 1)
+BEGIN 
+    RAISERROR('NO SE PUEDE GENERAR UN RESULTADO DONDE SE FORCE CREDEX PERO NO SE ADMITAN CUENTAS DE CREDEX',1,10)
+END
+ELSE IF(@CREDEX = 1 AND @FORCE_CREDEX = 0 AND @FORCE_TC = 0 )
+BEGIN 
+    INSERT INTO #RESULT
+    SELECT 
+        A.Nombre,
+        A.Cedula,
+        A.Domicilio,
+        A.Salario,
+        A.Departamento,
+        A.Municipio,
+        B.TEL1,
+        B.TEL2,
+        C.TARJETA1,
+        D.STATUSCREDEX
+    FROM #CTE_PERSONAS A
+    INNER JOIN #CTE_TELEFONOS_PIVOTED B ON A.IdPersona = B.IdPersonas
+    LEFT JOIN #CTE_TARJETAS_PIVOTED C ON A.IdPersona = C.IdPersona
+    LEFT JOIN #CTE_CREDEX D ON A.IdPersona = D.IdPersona 
+END
+ELSE IF(@CREDEX = 1 AND @FORCE_CREDEX = 0 AND @FORCE_TC = 1)
+BEGIN 
+    INSERT INTO #RESULT
+    SELECT 
+        A.Nombre,
+        A.Cedula,
+        A.Domicilio,
+        A.Salario,
+        A.Departamento,
+        A.Municipio,
+        B.TEL1,
+        B.TEL2,
+        C.TARJETA1,
+        D.STATUSCREDEX
+    FROM #CTE_PERSONAS A
+    INNER JOIN #CTE_TELEFONOS_PIVOTED B ON A.IdPersona = B.IdPersonas
+    INNER JOIN #CTE_TARJETAS_PIVOTED C ON A.IdPersona = C.IdPersona
+    LEFT JOIN #CTE_CREDEX D ON A.IdPersona = D.IdPersona 
+END
+ELSE IF(@CREDEX = 1 AND @FORCE_CREDEX = 1 AND @FORCE_TC = 0)
+BEGIN 
+    INSERT INTO #RESULT
+    SELECT 
+        A.Nombre,
+        A.Cedula,
+        A.Domicilio,
+        A.Salario,
+        A.Departamento,
+        A.Municipio,
+        B.TEL1,
+        B.TEL2,
+        C.TARJETA1,
+        D.STATUSCREDEX
+    FROM #CTE_PERSONAS A
+    INNER JOIN #CTE_TELEFONOS_PIVOTED B ON A.IdPersona = B.IdPersonas
+    LEFT JOIN #CTE_TARJETAS_PIVOTED C ON A.IdPersona = C.IdPersona
+    INNER JOIN #CTE_CREDEX D ON A.IdPersona = D.IdPersona
+END
+ELSE IF(@CREDEX = 1 AND @FORCE_CREDEX = 1 AND @FORCE_TC = 1)
+BEGIN 
+    INSERT INTO #RESULT
+    SELECT 
+        A.Nombre,
+        A.Cedula,
+        A.Domicilio,
+        A.Salario,
+        A.Departamento,
+        A.Municipio,
+        B.TEL1,
+        B.TEL2,
+        C.TARJETA1,
+        D.STATUSCREDEX
+    FROM #CTE_PERSONAS A
+    INNER JOIN #CTE_TELEFONOS_PIVOTED B ON A.IdPersona = B.IdPersonas
+    INNER JOIN #CTE_TARJETAS_PIVOTED C ON A.IdPersona = C.IdPersona
+    INNER JOIN #CTE_CREDEX D ON A.IdPersona = D.IdPersona
+END
+
+SELECT * FROM #RESULT
+
+DROP TABLE #CTE_CREDEX
+DROP TABLE #CTE_PERSONAS_DISPONIBLES
+DROP TABLE #CTE_PERSONAS
+DROP TABLE #CTE_TARJETAS_PIVOTED
+DROP TABLE #CTE_TELEFONOS_PIVOTED
