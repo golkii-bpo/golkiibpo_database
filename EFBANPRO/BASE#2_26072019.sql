@@ -91,27 +91,20 @@ AS (
     LEFT JOIN Departamento C ON B.IdDepartamento = C.IdDepartamento
 )
 
-    SELECT 
-        ''''+Departamento+''',' Departamento,
-        COUNT(*) N
-    FROM CTE_READY A
-    INNER JOIN GOLKIIDATA.DBO.Prefijos B ON A.TEL1 LIKE CONCAT(B.Prefijo,'%')
-    WHERE 
-    Departamento NOT IN ('MATAGALPA','JINOTEGA','Leon','Chinandega','Masaya','Granada','Atlantico Sue','Atlantico Norte','Chontales','Managua','Carazo','Esteli','Rivas','Boaco')
-    AND B.Operadora ='CLARO'
-    GROUP BY Departamento
-    ORDER BY N
+    -- SELECT 
+    --     ''''+Departamento+''',' Departamento,
+    --     COUNT(*) N
+    -- FROM CTE_READY A
+    -- INNER JOIN GOLKIIDATA.DBO.Prefijos B ON A.TEL1 LIKE CONCAT(B.Prefijo,'%')
+    -- -- WHERE 
+    -- -- Departamento IN ('')
+    -- -- AND 
+    -- -- B.Operadora ='MOVISTAR'
+    -- GROUP BY Departamento
+    -- ORDER BY N
 
--- SELECT * FROM CTE_READY A
---     INNER JOIN GOLKIIDATA.DBO.Prefijos B ON A.TEL1 LIKE CONCAT(B.Prefijo,'%')
--- WHERE 
--- Departamento IN ('Carazo',
--- 'Esteli',
--- 'Rivas',
--- 'Boaco')
--- AND
--- Departamento NOT IN ('MATAGALPA','JINOTEGA','Leon','Chinandega','Masaya','Granada','Managua','Carazo',
--- 'Esteli',
--- 'Rivas',
--- 'Boaco')
---  AND B.Operadora ='CLARO'
+SELECT * FROM CTE_READY A
+    INNER JOIN GOLKIIDATA.DBO.Prefijos B ON A.TEL1 LIKE CONCAT(B.Prefijo,'%')
+WHERE 
+Departamento IN ('Atlantico Sur','Atlantico Norte')
+ AND B.Operadora ='Movistar'

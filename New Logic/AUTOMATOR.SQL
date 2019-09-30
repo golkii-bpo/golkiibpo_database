@@ -14,10 +14,9 @@ CREATE TABLE CAMPAIGN
         PREFIX CHAR(5),
         CREATE_DATE DATE DEFAULT GETDATE() NOT NULL,
         MODIFY_DATE DATE DEFAULT GETDATE() NOT NULL,
-        STATE BIT DEFAULT 1 NOT NULL
+        STATE BIT DEFAULT 1 NOT NULL,
+        MIN_NEW_LEAD_LEVEL INT DEFAULT 1000
     )
-GO
-ALTER TABLE CAMPAIGN ADD MIN_NEW_LEAD_LEVEL INT DEFAULT 1000
 GO
 CREATE PROCEDURE ADD_CAMPAIGN
     (
@@ -255,26 +254,6 @@ CREATE TABLE LIST
         STATE BIT DEFAULT 1 NOT NULL
     )
 GO
-CREATE FUNCTION GET_PERSONAS_DISPONIBLES
-    (
-        @CAMPAIGN_ID NVARCHAR(15)
-    )
-    RETURNS NVARCHAR(MAX)
-    AS
-    BEGIN
-        DECLARE @MYSQL_QUERY NVARCHAR(MAX),@EXECUTE NVARCHAR(MAX)
-        SET @MYSQL_QUERY = CONCAT(N'
-        SELECT DISTINCT C.phone_number FROM vicidial_lists A
-        inner join vicidial_list B ON A.list_id = B.list_id
-        inner join vicidial_log C on B.lead_id = C.lead_id
-        WHERE A.campaign_id = ''''',RTRIM(LTRIM(@CAMPAIGN_ID)),'''''
-        AND call_date >= DATE_ADD(NOW(), INTERVAL -3 MONTH)
-        ORDER BY call_date DESC')
-        SET @EXECUTE = CONCAT('SELECT * FROM OPENQUERY([VICIDIAL],''', @MYSQL_QUERY,''')')
-        
-        RETURN @EXECUTE
-    END
-GO
 CREATE PROCEDURE ADD_LIST
     (
         @LIST_ID INT,
@@ -295,15 +274,35 @@ CREATE PROCEDURE ADD_LIST
         END
     END
 GO
+CREATE FUNCTION GET_PERSONAS_DISPONIBLES
+    (
+        @CAMPAIGN_ID NVARCHAR(15)
+    )
+    RETURNS NVARCHAR(MAX)
+    AS
+    BEGIN
+        DECLARE @MYSQL_QUERY NVARCHAR(MAX),@EXECUTE NVARCHAR(MAX)
+        SET @MYSQL_QUERY = CONCAT(N'
+        SELECT DISTINCT C.phone_number FROM vicidial_lists A
+        inner join vicidial_list B ON A.list_id = B.list_id
+        inner join vicidial_log C on B.lead_id = C.lead_id
+        WHERE A.campaign_id = ''''',RTRIM(LTRIM(@CAMPAIGN_ID)),'''''
+        AND call_date >= DATE_ADD(NOW(), INTERVAL -3 MONTH)
+        ORDER BY call_date DESC')
+        SET @EXECUTE = CONCAT('SELECT * FROM OPENQUERY([VICIDIAL],''', @MYSQL_QUERY,''')')
+        
+        RETURN @EXECUTE
+    END
+GO
 CREATE FUNCTION GET_LAST_VICI_LIST_ID ()
     RETURNS INT 
     AS BEGIN 
         DECLARE @LIST_ID INT
-        SELECT @LIST_ID = cast(list_id as int)  FROM OPENQUERY([VICIDIAL],'select max(list_id) as list_id from vicidial_lists')
+        SELECT @LIST_ID = cast(list_id as int)  FROM OPENQUERY([AUTOMATOR_VICIDIAL],'select max(list_id) as list_id from vicidial_lists')
         RETURN @LIST_ID
     END
 GO
-CREATE PROCEDURE AUTO_LIST
+ ALTER PROCEDURE AUTO_LIST
     (
         @CAMPAIGN_ID CHAR(15)
     )
@@ -384,143 +383,137 @@ CREATE PROCEDURE AUTO_LIST
             SET @LIST_NAME +=  '_'+ REPLACE(CONVERT(VARCHAR(8), GETDATE(), 3),'/','')
 
             DECLARE @LIST_ID INT
-            SET @LIST_ID = DBO.GET_LAST_VICI_LIST_ID() + 1
+            PRINT 'GET LAST VICI LIST ID'
+            BEGIN TRY
+                SELECT @LIST_ID = cast(list_id as int) + 1  FROM OPENQUERY([AUTOMATOR_VICIDIAL],'select max(list_id) as list_id from vicidial_lists')
+                PRINT CONCAT('ID OBTENIDO CON EXITO ',@LIST_ID)
+            END TRY
+            BEGIN CATCH
+                PRINT 'ERROR AL OBTENER SIGUIENTE VICI LIST ID'
+            RETURN ;
+            END CATCH
             
-            EXEC ADD_LIST @LIST_ID,@CAMPAIGN_ID,@LIST_SHORT_NAME,@LIST_NAME
-        END
-    END 
-GO
-CREATE TRIGGER VICI_AUTO_LIST
-ON LIST
-AFTER INSERT 
-AS BEGIN 
-INSERT  OPENQUERY 
-(
-[VICIDIAL],
-'
-    SELECT 
-        list_id,
-        list_name,
-        campaign_id,
-        active,
-        list_description,
-        list_changedate,
-        list_lastcalldate,
-        reset_time,
-        agent_script_override,
-        campaign_cid_override,
-        am_message_exten_override,
-        drop_inbound_group_override,
-        xferconf_a_number,
-        xferconf_b_number,
-        xferconf_c_number,
-        xferconf_d_number,
-        xferconf_e_number,
-        web_form_address,
-        web_form_address_two,
-        time_zone_setting,
-        inventory_report,
-        expiration_date,
-        na_call_url,
-        local_call_time,
-        web_form_address_three,
-        status_group_id,
-        user_new_lead_limit,
-        inbound_list_script_override,
-        default_xfer_group,
-        daily_reset_limit,
-        resets_today
-    FROM vicidial_lists
-'
-)
-select
-	A.LIST_ID,	        --  LIST_ID
-	A.NAME,	            --  LIST_NAME
-	@CAMPAIGN_ID,	    --  CAMPAIGN_ID
-	'N',	            --  ACTIVE
-	A.[DESCRIPTION],	-- LIST_DESCRIPTION
-	NULL,	            -- LIST_CHANGEDATE
-	NULL,		        -- LIST_LASTCALLDATE
-	NULL,		        -- RESET_TIME
-	NULL,		        -- AGENT_SCRIPT_OVERRIDE
-	NULL,		        -- CAMPAING_CID_OVERRIDE
-	NULL,		        -- AM_MESSAGE_EXTEND_OVERRIDE
-	NULL,		        -- DROP_INBOUND_GROUP_OVERRIDE
-	NULL,		        -- XFERCONF_A_NUMBER
-	NULL,		        -- XFERCONF_B_NUMBER
-	NULL,		        -- XFERCONF_C_NUMBER
-	NULL,		        -- XFERCONF_D_NUMBER
-	NULL,		        -- XFERCONF_E_NUMBER
-	NULL, 	            -- WEB_FORM_ADDRESS
-	NULL,		        -- WEB_FORM_ADDRESS_TWO
-	'COUNTRY_AND_AREA_CODE', -- TIME_ZONE_SETTING
-	'Y',		        -- INVENTORY_REPORT
-	'2099-12-31',       -- EXPIRATION_DATE
-	NULL,	            -- NA_CALL_URL
-	'campaign',	        -- LOCAL_CALL_TIME
-	NULL,		        -- WEB_FORM_ADDRESS_THREE
-	NULL,		        -- STATUS_GROUP_ID
-	-1,			        -- USER_NEW_LEAD_LIMIT
-	NULL,		        -- INBOUND_LIST_SCRIPT_OVERRIDE
-	'-- -NONE-- -',	    -- DEFAULT_XFER_GROUP
-	-1,		            -- DAILY_RESET_LIMIT
-	0			        -- RESETS_TODAY
-FROM INSERTED A
+            -- EXEC ADD_LIST @LIST_ID,@CAMPAIGN_ID,@LIST_SHORT_NAME,@LIST_NAME
+             IF EXISTS(SELECT * FROM AUTOMATOR.DBO.LIST WHERE LIST_ID = @LIST_ID)
+                BEGIN 
+                    RAISERROR ('LA LISTA ESPECIFICADA YA EXISTE',11,1)
+                END
+                ELSE
+                BEGIN
+                    PRINT CONCAT('LIST_ID: ',@LIST_ID)
+                    PRINT CONCAT('CAMPAIGN_ID: ',@CAMPAIGN_ID)
+                    PRINT CONCAT('SHORT NAME: ',@LIST_SHORT_NAME)
+                    PRINT CONCAT('LIST_NAME: ',@LIST_NAME)
+                    INSERT INTO LIST VALUES(@LIST_ID,@CAMPAIGN_ID,@LIST_SHORT_NAME,@LIST_NAME,DEFAULT,DEFAULT,DEFAULT)
+
+                DECLARE @ID INT 
+                SET @ID = CAST(@LIST_ID AS INT)
+                DECLARE @NAME NVARCHAR(20)
+                SET @NAME = SUBSTRING(@LIST_SHORT_NAME,1,20)
+
+                INSERT  OPENQUERY 
+                (
+                    [AUTOMATOR_VICIDIAL],
+                    '
+                        SELECT 
+                            list_id,
+                            list_name,
+                            campaign_id,
+                            active,
+                            list_description,
+                            list_changedate,
+                            list_lastcalldate,
+                            reset_time,
+                            agent_script_override,
+                            campaign_cid_override,
+                            am_message_exten_override,
+                            drop_inbound_group_override,
+                            xferconf_a_number,
+                            xferconf_b_number,
+                            xferconf_c_number,
+                            xferconf_d_number,
+                            xferconf_e_number,
+                            web_form_address,
+                            web_form_address_two,
+                            time_zone_setting,
+                            inventory_report,
+                            expiration_date,
+                            na_call_url,
+                            local_call_time,
+                            web_form_address_three,
+                            status_group_id,
+                            user_new_lead_limit,
+                            inbound_list_script_override,
+                            default_xfer_group,
+                            daily_reset_limit,
+                            resets_today
+                        FROM vicidial_lists
+                    '
+                )
+                VALUES
+                (
+                    @ID,	        --  LIST_ID
+                    @NAME,   --  LIST_NAME
+                    @CAMPAIGN_ID,	    --  CAMPAIGN_ID
+                    'N',	            --  ACTIVE
+                    @LIST_NAME,	        -- LIST_DESCRIPTION
+                    NULL,	            -- LIST_CHANGEDATE
+                    NULL,		        -- LIST_LASTCALLDATE
+                    NULL,		        -- RESET_TIME
+                    NULL,		        -- AGENT_SCRIPT_OVERRIDE
+                    NULL,		        -- CAMPAING_CID_OVERRIDE
+                    NULL,		        -- AM_MESSAGE_EXTEND_OVERRIDE
+                    NULL,		        -- DROP_INBOUND_GROUP_OVERRIDE
+                    NULL,		        -- XFERCONF_A_NUMBER
+                    NULL,		        -- XFERCONF_B_NUMBER
+                    NULL,		        -- XFERCONF_C_NUMBER
+                    NULL,		        -- XFERCONF_D_NUMBER
+                    NULL,		        -- XFERCONF_E_NUMBER
+                    NULL, 	            -- WEB_FORM_ADDRESS
+                    NULL,		        -- WEB_FORM_ADDRESS_TWO
+                    'COUNTRY_AND_AREA_CODE', -- TIME_ZONE_SETTING
+                    'Y',		        -- INVENTORY_REPORT
+                    '2099-12-31',       -- EXPIRATION_DATE
+                    NULL,	            -- NA_CALL_URL
+                    'campaign',	        -- LOCAL_CALL_TIME
+                    NULL,		        -- WEB_FORM_ADDRESS_THREE
+                    NULL,		        -- STATUS_GROUP_ID
+                    -1,			        -- USER_NEW_LEAD_LIMIT
+                    NULL,		        -- INBOUND_LIST_SCRIPT_OVERRIDE
+                    '-- -NONE-- -',	    -- DEFAULT_XFER_GROUP
+                    -1,		            -- DAILY_RESET_LIMIT
+                    0			        -- RESETS_TODAY
+                )
 
 
-END
+
+
+                                PRINT 'SE HA INGRESADO LA LISTA AUTOMATICA EXITOSAMENTE'
+                            END
+                    END
+                END 
 GO
-CREATE PROCEDURE UPLOAD_LEAD_FOR_LIST 
-    (   
-        @CAMPAING_ID NVARCHAR(15),
-        @LIST_ID INT
-    )
+ALTER PROCEDURE UPLOAD_LEAD_FOR_LIST 
+    -- (   
+    --     @CAMPAING_ID NVARCHAR(15),
+    --     @LIST_ID INT
+    -- )
     AS BEGIN
 
         PRINT 'ACTIVE CAMPAIGNS'
-            SELECT CAMPAIGN_ID,CAMPAIGN_NAME,HOPPER_LEVEL,AUTO_DIAL_LEVEL 
+            SELECT CAMPAIGN_ID,CAMPAIGN_NAME,HOPPER_LEVEL,AUTO_DIAL_LEVEL  
             INTO #VICI_ACTIVE_CAMPAIGNS
-            FROM OPENQUERY([VICIDIAL],
-            'select campaign_id,campaign_name,hopper_level,auto_dial_level 
-            from vicidial_campaigns 
-            where active = ''Y''
-            and campaign_id not in (''calioutb'',''atencion'')')
+            FROM GET_VICI_ACTIVE_CAMPAIGNS()
 
         PRINT 'NEW LEADS IN CAMPAIGNS'
             SELECT * 
             INTO #VICI_NEW_LEADS
-            FROM OPENQUERY([VICIDIAL],
-            'SELECT 
-                B.campaign_id,
-                COUNT(LEAD_ID) NEW_LEADS
-            FROM vicidial_list A
-            INNER JOIN vicidial_lists B ON A.list_id = B.list_id
-            INNER JOIN vicidial_campaigns  C ON B.campaign_id = C.campaign_id
-            WHERE A.`status`=''NEW'' AND B.active = ''Y''
-            AND  C.active = ''Y''
-            and C.campaign_id not in (''calioutb'',''atencion'')
-            GROUP BY campaign_id')
+            FROM GET_VICI_NEW_LEADS()
 
         PRINT 'ACTIVE PROFILES AUTOMATOR'
-            SELECT  A.PROFILE_ID,
-                    A.CAMPAIGN,
-                    A.NOMBRE AS PROFILE_NAME,
-                    A.SALARIO_MIN,
-                    A.SALARIO_MAX,
-                    A.FORCE_CREDEX,
-                    A.FORCE_TC,
-                    A.[STATE],
-                    A.CREDEX,
-                    B.MIN_NEW_LEAD_LEVEL,
-                    ROW_NUMBER() OVER(PARTITION BY CAMPAIGN ORDER BY PROFILE_ID) N
+            SELECT * 
             INTO #ACTIVE_PROFILES
-            FROM AUTOMATOR.DBO.PROFILE A
-            INNER JOIN AUTOMATOR.dbo.CAMPAIGN B ON A.CAMPAIGN = B.CAMPAIGN_ID
-            WHERE A.[STATE] = 1;
-
-
-
-
+            FROM GET_ACTIVE_PROFILES()
 
         PRINT 'CHARGE CAMPAIGN'
             SELECT 
@@ -580,7 +573,6 @@ CREATE PROCEDURE UPLOAD_LEAD_FOR_LIST
                     SELECT @SMAX = MAX(Salario) FROM GOLKIIDATA.DBO.Persona
                 END;
             
-
             --  SE TIENE QUE HACER UN SWITCH INTELIGENTE SOBRE DONDE CONSULTAR LA DISPONIBILIDAD DE LOS CLIENTES
             PRINT 'PERSONAS NO DISPONIBLES';
                 DECLARE @EXECUTE NVARCHAR(MAX)
@@ -841,87 +833,147 @@ CREATE PROCEDURE UPLOAD_LEAD_FOR_LIST
                     INNER JOIN #CTE_CREDEX D ON A.IdPersona = D.IdPersona
                 END
             -- --------------------------------------
-            PRINT 'SELECT RESULTADO'
-            EXEC ('SELECT TOP '+@CHARGE_LEVEL+' * INTO #INSERTION FROM #RESULT')
 
-        -- TODO:
-        -- INSERTAR LISTA
-        EXEC DBO.AUTO_LIST @CAMPAIGN_ID
+            -- TODO:
+            -- INSERTAR LISTA
 
-        -- INSERTAR LEADS
-        -------------------------------------------------------------------------------------------------------------------------------------------   
-        -- VIEW RESULT
-        SELECT 
-            GETDATE()				AS [entry_date],
-            NULL               	    AS [modify_date],
-            'NEW'					AS [status],
-            NULL					AS [user],
-            NULL					AS [vendor_lead_code],
-            NULL					AS [source_id],
-            @LIST_ID				AS [list_id],
-            '-6'					AS [gmt_offset_now],
-            'N'					    AS [called_since_last_reset],
-            '505'					AS [phone_code],
-            A.TEL1			        AS [phone_number],
-            NULL					AS [title],
-            A.Nombre			    AS [first_name],
-            NULL					AS [middle_initial],
-            NULL					AS [last_name],
-            A.Domicilio			    AS [address1],
-            A.Salario				AS [address2],
-            A.Cedula				AS [address3],
-            A.Departamento			AS [city],
-            NULL					AS [state],
-            A.Municipio			    AS [province],
-            NULL					AS [postal_code],
-            NULL					AS [country_code],
-            NULL					AS [gender],
-            NULL			        AS [date_of_birth],
-            A.TEL2				    AS [alt_phone],
-            A.STATUSCREDEX			AS [email],
-            NULL					AS [security_phrase],
-            A.TARJETA1				AS [comments],
-            0						AS [called_count],
-            NULL			        AS [last_local_call_time],
-            0						AS [rank],
-            NULL					AS [owner],
-            0						AS [entry_list_id]
-        FROM #RESULT A
+            EXEC DBO.AUTO_LIST @CAMPAIGN_ID
 
+            DECLARE @LIST_ID INT
+            PRINT 'GET LAST VICI LIST ID'
+            BEGIN TRY
+                SELECT @LIST_ID = cast(list_id as int)  FROM OPENQUERY([AUTOMATOR_VICIDIAL],'select max(list_id) as list_id from vicidial_lists')
+                PRINT CONCAT('ID OBTENIDO CON EXITO ',@LIST_ID)
+            END TRY
+            BEGIN CATCH
+                PRINT 'ERROR AL OBTENER SIGUIENTE VICI LIST ID'
+            RETURN ;
+            END CATCH
 
-    -- --------------------------------------
-    -- --------------------------------------
-    DROP TABLE #INSERTION
-    DROP TABLE #RESULT
-    DROP TABLE #CTE_CREDEX
-    DROP TABLE #PERSONA_NO_DISPONIBLE
-    DROP TABLE #CTE_PERSONAS_DISPONIBLES
-    DROP TABLE #CTE_PERSONAS
-    DROP TABLE #CTE_TARJETAS_PIVOTED
-    DROP TABLE #CTE_TELEFONOS_PIVOTED
-    -- --------------------------------------
+            PRINT CONCAT('LIST_ID IN VICIDIAL ',@LIST_ID)
 
-    FETCH NEXT FROM CURSOR_AUTOMATOR_CHARGE
-        INTO @CAMPAIGN_ID, @HOPPER_LEVEL, @AUTO_DIAL_LEVEL,@MIN_NEW_LEAD_LEVEL, @NEW_LEADS, @PROFILE_ID,@PROFILE_NAME, @SMIN, @SMAX, @CREDEX, @FCREDEX, @FTC
+            PRINT 'SELECT RESULTADO INTO INSERTION'
+            SELECT TOP (@CHARGE_LEVEL) * INTO #INSERTION FROM #RESULT
 
+            -- INSERTAR LEADS
+            -------------------------------------------------------------------------------------------------------------------------------------------   
+            -- VIEW RESULT
+            INSERT OPENQUERY
+                ([VICIDIAL],
+                '
+                    SELECT 
+                        entry_date	,
+                        modify_date	,
+                        status	,
+                        user	,
+                        vendor_lead_code	,
+                        source_id	,
+                        list_id	,
+                        gmt_offset_now	,
+                        called_since_last_reset	,
+                        phone_code	,
+                        phone_number	,
+                        title	,
+                        first_name	,
+                        middle_initial	,
+                        last_name	,
+                        address1	,
+                        address2	,
+                        address3	,
+                        city	,
+                        state	,
+                        province	,
+                        postal_code	,
+                        country_code	,
+                        gender	,
+                        date_of_birth	,
+                        alt_phone	,
+                        email	,
+                        security_phrase	,
+                        comments	,
+                        called_count	,
+                        last_local_call_time	,
+                        rank	,
+                        owner	,
+                        entry_list_id	
+                    FROM vicidial_list
+                ')
+                SELECT 
+                    GETDATE()				AS [entry_date],
+                    NULL               	    AS [modify_date],
+                    'NEW'					AS [status],
+                    NULL					AS [user],
+                    NULL					AS [vendor_lead_code],
+                    NULL					AS [source_id],
+                    @LIST_ID				AS [list_id],
+                    '-6'					AS [gmt_offset_now],
+                    'N'					    AS [called_since_last_reset],
+                    '505'					AS [phone_code],
+                    A.TEL1			        AS [phone_number],
+                    NULL					AS [title],
+                    SUBSTRING(A.Nombre,1,30)        AS [first_name],
+                    NULL					AS [middle_initial],
+                    NULL					AS [last_name],
+                    SUBSTRING(A.Domicilio,1,100)    AS [address1],
+                    A.Salario				AS [address2],
+                    A.Cedula				AS [address3],
+                    A.Departamento			AS [city],
+                    NULL					AS [state],
+                    A.Municipio			    AS [province],
+                    NULL					AS [postal_code],
+                    NULL					AS [country_code],
+                    NULL					AS [gender],
+                    NULL			        AS [date_of_birth],
+                    A.TEL2				    AS [alt_phone],
+                    A.STATUSCREDEX			AS [email],
+                    NULL					AS [security_phrase],
+                    A.TARJETA1				AS [comments],
+                    0						AS [called_count],
+                    NULL			        AS [last_local_call_time],
+                    0						AS [rank],
+                    NULL					AS [owner],
+                    0						AS [entry_list_id]
+                FROM #INSERTION A
+
+         
+
+            -- --------------------------------------
+            -- --------------------------------------
+            DROP TABLE #INSERTION
+            DROP TABLE #RESULT
+            DROP TABLE #CTE_CREDEX
+            DROP TABLE #PERSONA_NO_DISPONIBLE
+            DROP TABLE #CTE_PERSONAS_DISPONIBLES
+            DROP TABLE #CTE_PERSONAS
+            DROP TABLE #CTE_TARJETAS_PIVOTED
+            DROP TABLE #CTE_TELEFONOS_PIVOTED
+            -- --------------------------------------
+
+            FETCH NEXT FROM CURSOR_AUTOMATOR_CHARGE
+                INTO @CAMPAIGN_ID, @HOPPER_LEVEL, @AUTO_DIAL_LEVEL,@MIN_NEW_LEAD_LEVEL, @NEW_LEADS, @PROFILE_ID,@PROFILE_NAME, @SMIN, @SMAX, @CREDEX, @FCREDEX, @FTC
+
+        END
+
+    CLOSE CURSOR_AUTOMATOR_CHARGE
+    DEALLOCATE CURSOR_AUTOMATOR_CHARGE
+
+    DROP TABLE #VICI_ACTIVE_CAMPAIGNS
+    DROP TABLE #ACTIVE_PROFILES
+    DROP TABLE #VICI_NEW_LEADS
+    DROP TABLE #CHARGE_CAMPAIGN
 END
-CLOSE CURSOR_AUTOMATOR_CHARGE
-DEALLOCATE CURSOR_AUTOMATOR_CHARGE
-
-DROP TABLE #VICI_ACTIVE_CAMPAIGNS
-DROP TABLE #ACTIVE_PROFILES
-DROP TABLE #VICI_NEW_LEADS
-DROP TABLE #CHARGE_CAMPAIGN
-
-
-    END
 GO
+-- SE REGISTRA LA CAMPAÑA DE PRUEBA EN LA BASE DE DATOS
 EXEC ADD_CAMPAIGN 'TESTE','CAMPAÑA PARA REALIZACION DE PRUEBAS Y ENTRENAMIENTO','TEST'
+-- SE AGREGA UN PERFIL DE AUTOCARGA PARA LA CAMPAÑA DE PRUEBA
 EXEC ADD_PROFILE 'TESTE','CIERRE DE MES, MANAGUA 10K-25K [F]CREDEX [F]TC',10000,25000,1,1,1
+-- SE REGISTRAN TODOS LOS BANCOS EXCEPTO "OTROS" PARA EL PERFIL DE AUTOCARGA DE PRUEBA
 EXEC ADD_BANK_PROFILE 1,1
 EXEC ADD_BANK_PROFILE 2,1
 EXEC ADD_BANK_PROFILE 3,1
 EXEC ADD_BANK_PROFILE 4,1
 EXEC ADD_BANK_PROFILE 5,1
+-- SE AGREGA EL DEPARTAMENTO DE MANAGUA AL PERFIL DE AUTOCARGA DE PRUEBA
 EXEC ADD_DEP_PROFILE  3,1
+-- SE ACTIVA EL PERFIL DE AUTOCARGA DE PRUEBA
 EXEC ENABLE_PROFILE 1

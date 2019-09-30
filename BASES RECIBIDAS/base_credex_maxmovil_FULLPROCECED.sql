@@ -1,0 +1,50 @@
+
+WITH CTE_BASE
+AS(
+    SELECT 
+        LTRIM(RTRIM(NOMBRE)) COLLATE DATABASE_DEFAULT AS NOMBRE,
+        TEL1,
+        TEL2,
+        ID
+    FROM BASESRECIBIDAS.DBO.BASE_CREDEX_MAXMOVIL_05092019
+),
+CTE_UNPVT
+AS(
+    SELECT * FROM CTE_BASE
+    UNPIVOT(TELEFONO FOR TELNO IN (TEL1,TEL2))U
+),
+CTE_DATA
+AS(
+    SELECT ID,NOMBRE,TELEFONO,'TIENE CREDEX' AS CREDEX FROM CTE_UNPVT
+    WHERE TELEFONO LIKE '[8|5|7][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+),
+CTE_ALREADY_CALLED(phone_number)
+AS
+(
+    SELECT phone_number FROM OPENQUERY
+    (
+        [VICIDIAL],
+        '
+        select phone_number from vicidial_log where call_date >= ''2019-06-05''
+        '
+    )
+    where phone_number like '[8|5|7][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+),
+CTE_DATA_CLEANED
+AS
+(
+    SELECT A.* 
+    FROM CTE_DATA A
+    LEFT JOIN CTE_ALREADY_CALLED B ON CAST(A.TELEFONO AS INT) = B.phone_number
+    WHERE B.phone_number IS NULL
+),
+CTE_COUNTER
+AS(
+    SELECT 
+        A.*,
+        ROW_NUMBER() OVER(PARTITION BY ID ORDER BY ID) N
+    FROM CTE_DATA_CLEANED A
+)
+SELECT * 
+FROM CTE_COUNTER
+PIVOT(MAX(TELEFONO) FOR N IN ([1],[2]))P

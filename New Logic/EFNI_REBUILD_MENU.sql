@@ -1,8 +1,9 @@
 
 USE EFNI;
 GO
-DECLARE @SALARIO_MIN FLOAT;
-SET @SALARIO_MIN = 9000;
+
+
+
 DECLARE @BANCOS TABLE (IDB INT)
 INSERT INTO @BANCOS 
 VALUES  
@@ -15,8 +16,8 @@ VALUES
         (4) -- LAFISE
         ,
         (5) -- BANPRO
-        -- ,
-        -- (6) -- OTROS
+        ,
+        (6) -- OTROS
         ; 
 WITH
 CTE_PERSONAS_DISPONIBLES AS
@@ -42,10 +43,6 @@ AS(
     FROM CTE_PERSONAS_DISPONIBLES A
     INNER JOIN GOLKIIDATA.DBO.Persona B ON A.EFNI_Persona = B.IdPersona
     LEFT JOIN CTE_DEMOGRAFIA C ON B.Demografia = C.CodMunicipio
-    WHERE 
-        B.Salario >= @SALARIO_MIN
-        -- OR 
-        -- B.Salario = 0
 )
 ,
 CTE_TARJETAS
@@ -77,28 +74,34 @@ AS(
     SELECT  
         A.IdPersonas,
         A.Telefono,
+        C.Tipificacion,
         ROW_NUMBER() OVER(PARTITION BY A.IdPersonas ORDER BY A.Telefono) N
     FROM GOLKIIDATA.DBO.Telefonos A
     INNER JOIN CTE_PERSONAS_DISPONIBLES B ON A.IdPersonas = B.EFNI_Persona
     INNER JOIN EFNI.DBO.Telefono C ON A.Telefono = C.EFNI_Telefono
     WHERE 
-    C.Disponible = 1
+    -- c.Tipificacion in ('AA','A','B','NA')
+    C.Tipificacion NOT IN ('NAPOL','DC') 
     AND 
-    A.Operadora IN (
-        'CLARO',
-        'MOVISTAR',
-        NULL
-        )
-    
+    C.Disponible = 1
+    AND (
+        A.Operadora IN (
+            -- 'CLARO'
+            -- ,
+            'MOVISTAR'
+            )
+        -- OR Operadora IS NULL
+    )
 ),
 CTE_TELEFONOS_PIVOTED
 AS(
     SELECT 
         P.IdPersonas,
-        [1] AS TEL1,
-        [2] AS TEL2
+        MAX([1]) AS TEL1,
+        MAX([2]) AS TEL2
     FROM CTE_TELEFONOS
     PIVOT(MAX(TELEFONO) FOR N IN ([1],[2])) P
+    GROUP BY P.IdPersonas
 )
 ,
 CTE_LASTCREDEX
@@ -137,31 +140,47 @@ AS(
     FROM CTE_PERSONAS A
     INNER JOIN CTE_TELEFONOS_PIVOTED B ON A.IdPersona = B.IdPersonas
     INNER JOIN CTE_TARJETAS_PIVOTED C ON A.IdPersona = C.IdPersona
-    left JOIN CTE_CREDEX D ON A.IdPersona = D.IdPersona 
-    WHERE D.IdPersona IS NULL
+    INNER JOIN CTE_CREDEX D ON A.IdPersona = D.IdPersona 
+    -- WHERE D.IdPersona IS NULL
 )
 ,
 CTE_MENU
 AS(
     SELECT ''''+Departamento+''',' AS DEPARTAMENTO,
-        COUNT(*) N
+
+        CASE
+            WHEN (Salario = 0 ) THEN 'UNKNOW'
+            WHEN (Salario BETWEEN 1 AND 5000) THEN '01K-<5K'
+            WHEN (Salario BETWEEN 5000 AND 10000) THEN '05K-10K'
+            WHEN (Salario BETWEEN 10001 AND 15000) THEN '10K-15K'
+            WHEN (Salario BETWEEN 15001 AND 20000) THEN '15K-20K'
+            WHEN (Salario BETWEEN 20001 AND 30000) THEN '20K-30K'
+            ELSE '30K-INFINITY'
+        END AS SALKIND,
+        1 AS C
     FROM CTE_DATA
-    GROUP BY DEPARTAMENTO
 )
+--------------------------------------
+--              MENU                --
+--------------------------------------
 
-    SELECT 
-        * 
-    FROM CTE_DATA
-    WHERE 
-    Departamento 
-    IN (
-        'Managua'
-    )
+SELECT * FROM CTE_MENU A
+PIVOT ( SUM(C) FOR SALKIND IN ( [UNKNOW], [01K-<5K],[05K-10K],[10K-15K],[15K-20K],[20K-30K],[30K-INFINITY]) )P
 
--- SELECT * FROM CTE_MENU ORDER BY N DESC
--- SELECT * FROM CTE_BASE
-    
-
+--------------------------------------
+--              BASE                --
+-- --------------------------------------
+--     SELECT 
+--         * 
+--     FROM CTE_DATA
+--     WHERE 
+--     Departamento 
+--     IN (
+-- 'Chinandega'
+--     )
+--     AND 
+--     Salario BETWEEN 10001 AND 20000
+ 
     
 
 

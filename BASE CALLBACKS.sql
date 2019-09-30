@@ -1,0 +1,16 @@
+
+
+select
+*
+ from BaseCallbacksFiltrada 
+where 
+CITY IN ('CARAZO','RIVAS','GRANADA/','MANAGUA.')
+AND 
+city NOT in(
+'CHINANDEGA',
+'LEON',
+'MASAYA',
+'GRANADA','MANAGUA',
+'ESTELI','MADRIZ','JINOTEGA',
+'CHONTALES','BOACO','MATAGALPA'
+)

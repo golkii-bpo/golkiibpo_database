@@ -1,8 +1,16 @@
 
-USE EFNI;
-GO
-DECLARE @SALARIO_MIN FLOAT;
-SET @SALARIO_MIN = 9000;
+--USE EFNI;
+--GO
+/*
+IF OBJECT_ID('tempdb..#PHONES') IS NOT NULL
+    DROP TABLE #PHONES
+
+DECLARE @QUERY NVARCHAR(MAX)
+SELECT @QUERY = GOLKIIDATA.DBO.QUERY_PHONES_ALREADY_CALLED ();
+CREATE TABLE #PHONES (PHONE INT)
+SET @QUERY = 'INSERT INTO #PHONES '+@QUERY
+EXEC (@QUERY)
+*/
 DECLARE @BANCOS TABLE (IDB INT)
 INSERT INTO @BANCOS 
 VALUES  
@@ -15,16 +23,16 @@ VALUES
         (4) -- LAFISE
         ,
         (5) -- BANPRO
-        -- ,
-        -- (6) -- OTROS
+        ,
+        (6) -- OTROS
         ; 
 WITH
 CTE_PERSONAS_DISPONIBLES AS
 (
     SELECT 
-        *
-    FROM EFNI.DBO.PERSONA 
-    WHERE Disponible = 1
+        A.*
+    FROM EFNI.DBO.PERSONA A
+    INNER JOIN Telefono B ON A.EFNI_Persona = B.LastIdPersona
 ),
 CTE_DEMOGRAFIA
 AS(
@@ -42,10 +50,6 @@ AS(
     FROM CTE_PERSONAS_DISPONIBLES A
     INNER JOIN GOLKIIDATA.DBO.Persona B ON A.EFNI_Persona = B.IdPersona
     LEFT JOIN CTE_DEMOGRAFIA C ON B.Demografia = C.CodMunicipio
-    WHERE 
-        B.Salario >= @SALARIO_MIN
-        -- OR 
-        -- B.Salario = 0
 )
 ,
 CTE_TARJETAS
@@ -72,33 +76,58 @@ AS (
     FROM CTE_TARJETAS
     PIVOT(MAX(BANCO) FOR N IN ([1],[2],[3])  )P
 ),
+CTE_ALREADY_CALLED
+AS(
+    SELECT PHONE FROM #PHONES
+),
+CTE_PHONES_IN_ACTIVE_LIST
+AS(
+    SELECT * FROM GOLKIIDATA.DBO.TBL_PHONES_IN_ACTIVE_LIST()
+)
+,
 CTE_TELEFONOS
 AS(
     SELECT  
+        DISTINCT
         A.IdPersonas,
-        A.Telefono,
-        ROW_NUMBER() OVER(PARTITION BY A.IdPersonas ORDER BY A.Telefono) N
+        A.Telefono
     FROM GOLKIIDATA.DBO.Telefonos A
     INNER JOIN CTE_PERSONAS_DISPONIBLES B ON A.IdPersonas = B.EFNI_Persona
     INNER JOIN EFNI.DBO.Telefono C ON A.Telefono = C.EFNI_Telefono
+    LEFT JOIN CTE_ALREADY_CALLED D ON A.Telefono = D.PHONE
+    LEFT JOIN CTE_PHONES_IN_ACTIVE_LIST E ON A.Telefono = E.TELEFONO
     WHERE 
-    C.Disponible = 1
+    D.PHONE IS NULL 
     AND 
-    A.Operadora IN (
-        'CLARO',
-        'MOVISTAR',
-        NULL
+    E.TELEFONO IS NULL
+    AND
+    C.Tipificacion NOT IN ('NAPOL','DC') 
+    AND 
+    C.Disponible = 1
+    AND (
+        A.Operadora IN (
+            'CLARO'
+            ,
+            'MOVISTAR'
         )
-    
+        -- OR Operadora IS NULL
+    )
+),
+CTE_COUNTER
+as(
+    SELECT *,
+        ROW_NUMBER() OVER(PARTITION BY IdPersonas ORDER BY Telefono) N
+    FROM CTE_TELEFONOS
 ),
 CTE_TELEFONOS_PIVOTED
 AS(
     SELECT 
         P.IdPersonas,
-        [1] AS TEL1,
-        [2] AS TEL2
-    FROM CTE_TELEFONOS
+        MAX([1]) AS TEL1,
+        MAX([2]) AS TEL2
+    FROM CTE_COUNTER
     PIVOT(MAX(TELEFONO) FOR N IN ([1],[2])) P
+    GROUP BY P.IdPersonas
 )
 ,
 CTE_LASTCREDEX
@@ -137,31 +166,48 @@ AS(
     FROM CTE_PERSONAS A
     INNER JOIN CTE_TELEFONOS_PIVOTED B ON A.IdPersona = B.IdPersonas
     INNER JOIN CTE_TARJETAS_PIVOTED C ON A.IdPersona = C.IdPersona
-    left JOIN CTE_CREDEX D ON A.IdPersona = D.IdPersona 
-    WHERE D.IdPersona IS NULL
+    INNER JOIN CTE_CREDEX D ON A.IdPersona = D.IdPersona 
+    -- WHERE D.IdPersona IS NULL
 )
 ,
 CTE_MENU
 AS(
     SELECT ''''+Departamento+''',' AS DEPARTAMENTO,
-        COUNT(*) N
-    FROM CTE_DATA
-    GROUP BY DEPARTAMENTO
-)
 
+        CASE
+            WHEN (Salario = 0 ) THEN 'UNKNOW'
+            WHEN (Salario BETWEEN 1 AND 5000) THEN '01K-<5K'
+            WHEN (Salario BETWEEN 5000 AND 10000) THEN '05K-10K'
+            WHEN (Salario BETWEEN 10001 AND 15000) THEN '10K-15K'
+            WHEN (Salario BETWEEN 15001 AND 20000) THEN '15K-20K'
+            WHEN (Salario BETWEEN 20001 AND 30000) THEN '20K-30K'
+            ELSE '30K-INFINITY'
+        END AS SALKIND,
+        1 AS C
+    FROM CTE_DATA
+)
+--------------------------------------
+--              MENU                --
+--------------------------------------
+
+-- SELECT * FROM CTE_MENU A
+-- PIVOT ( SUM(C) FOR SALKIND IN ( [UNKNOW], [01K-<5K],[05K-10K],[10K-15K],[15K-20K],[20K-30K],[30K-INFINITY]) )P
+
+--------------------------------------
+--              BASE                --
+-- --------------------------------------
     SELECT 
+    DISTINCT
+    TOP 5000
         * 
     FROM CTE_DATA
     WHERE 
     Departamento 
-    IN (
-        'Managua'
+    IN ('MASAYA','GRANADA','MANAGUA'
     )
-
--- SELECT * FROM CTE_MENU ORDER BY N DESC
--- SELECT * FROM CTE_BASE
-    
-
+    AND 
+    Salario > 15000
+ 
     
 
 

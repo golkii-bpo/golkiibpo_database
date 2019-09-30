@@ -1,0 +1,13 @@
+
+    SELECT C.IdPersona,
+    A.ID ID_BASEREC,
+    A.TELEFONO,
+    A.NOMBRE COLLATE DATABASE_DEFAULT NEW_NOMBRE,
+    C.NOMBRE OLD_NOMBRE,
+    D.Tipificacion
+    FROM BasesRecibidas.DBO.BASE_CREDEX_ELIEZER_31072019 A
+    LEFT JOIN Telefonos B ON A.TELEFONO = B.Telefono
+    LEFT JOIN Persona C ON B.IdPersonas = C.IdPersona
+    LEFT JOIN EFNI.DBO.Telefono D ON B.Telefono = D.EFNI_Telefono
+    WHERE C.BaseRecibida IS NULL
+

@@ -1,0 +1,6 @@
+SELECT A.*,C.*,B.* 
+FROM BasesRecibidas.DBO.BASE_FICOHSA_ELIEZER_13082019 A
+LEFT JOIN EFNI.DBO.Telefono B ON A.[Nº BASE] = B.EFNI_Telefono
+LEFT JOIN GOLKIIDATA.DBO.Persona C ON B.LastIdPersona = C.IdPersona
+WHERE B.FechaLlamada <= DATEADD(MONTH,-3,GETDATE())
+OR B.FechaLlamada IS NULL
